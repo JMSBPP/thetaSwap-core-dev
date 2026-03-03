@@ -1,0 +1,321 @@
+% invariants.tex — All 31 invariants in Hoare triple format (self-contained)
+% Kontrol: prove_cfmm_structural_*, prove_cfmm_economic_*, prove_cfmm_rate_*,
+%          prove_cfmm_fsm_*, prove_cfmm_replication_*, prove_cfmm_perpetual_*,
+%          prove_cfmm_feeconc_*
+
+\section{Invariants}\label{sec:invariants}
+
+This section reproduces all 31 invariants in full. An auditor reads this section
+without needing any external reference.
+
+% ══════════════════════════════════════════════════════════════════════════════
+\subsection{Tier 1: Structural Properties (CFMM-01 through CFMM-05)}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\begin{invariant}{CFMM-01}{No-drain (swap)}
+% Kontrol: prove_cfmm_structural_noDrainSwap
+\[
+  \{x > 0 \land y > 0\} \;\longrightarrow\; \texttt{swap}(\Delta x)
+  \;\longrightarrow\; \{x' > 0 \land y' > 0\}
+\]
+A swap never drains either reserve to zero.
+\end{invariant}
+
+\begin{invariant}{CFMM-02}{No-drain (redeem)}
+% Kontrol: prove_cfmm_structural_noDrainRedeem
+\[
+  \{x > 0 \land y > 0\} \;\longrightarrow\; \texttt{redeem}(s)
+  \;\longrightarrow\; \{x' \geq 0 \land y' \geq 0\}
+\]
+A redemption never makes reserves negative.
+\end{invariant}
+
+\begin{invariant}{CFMM-03}{Output bound}
+% Kontrol: prove_cfmm_structural_outputBound
+\[
+  \{\texttt{swap}(\Delta x)\} \;\longrightarrow\; \{\Delta y < y\}
+\]
+A single swap cannot extract the entire numeraire reserve.
+\end{invariant}
+
+\begin{invariant}{CFMM-04}{AMM $\leftrightarrow$ supply biconditional}
+% Kontrol: prove_cfmm_structural_ammSupply
+\[
+  \{\texttt{active}(\text{amm})\} \;\longleftrightarrow\; \{S_{\text{total}} > 0\}
+\]
+The AMM is active if and only if total LP supply is positive.
+\end{invariant}
+
+\begin{invariant}{CFMM-05}{Swap preserves LP supply}
+% Kontrol: prove_cfmm_structural_swapPreservesSupply
+\[
+  \{S_{\text{total}}\} \;\longrightarrow\; \texttt{swap}(\Delta x)
+  \;\longrightarrow\; \{S_{\text{total}}' = S_{\text{total}}\}
+\]
+Swaps do not mint or burn LP tokens.
+\end{invariant}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\subsection{Tier 2: Economic Properties (CFMM-06 through CFMM-10)}
+% ══════════════════════════════════════════════════════════════════════════════
+
+Source: Bartoletti et al.\ \cite{bartoletti2024formalizing}.
+
+\begin{invariant}{CFMM-06}{Gain formula}
+% Kontrol: prove_cfmm_economic_gainFormula
+\[
+  \text{gain}(\Gamma, t) = S_t \cdot r(\Gamma, t) - c_t
+\]
+The gain from a swap strategy $\Gamma$ at time $t$ equals the spot price times
+the swap rate minus the cost basis. (Bartoletti Theorem~2.)
+\end{invariant}
+
+\begin{invariant}{CFMM-07}{Gain direction}
+% Kontrol: prove_cfmm_economic_gainDirection
+\[
+  \text{gain} \geq 0 \;\;\text{iff}\;\; S_t \cdot r(\Gamma, t) \geq c_t
+\]
+A swap is profitable iff the value received exceeds the cost. (Bartoletti Corollary.)
+\end{invariant}
+
+\begin{invariant}{CFMM-08}{Rate vs oracle}
+% Kontrol: prove_cfmm_economic_rateOracle
+\[
+  |SX(\Gamma, \Delta x) - \pi| < \varepsilon \quad \text{for small } \Delta x
+\]
+The swap rate converges to the oracle price for infinitesimal trades.
+(Bartoletti Proposition~6.)
+\end{invariant}
+
+\begin{invariant}{CFMM-09}{Optimality sufficiency}
+% Kontrol: prove_cfmm_economic_optimalSufficiency
+\[
+  SX = \pi \;\implies\; \texttt{swap} \text{ maximizes gain}
+\]
+A swap at the oracle price is gain-optimal. (Bartoletti Theorem~4.)
+\end{invariant}
+
+\begin{invariant}{CFMM-10}{Arbitrage formula}
+% Kontrol: prove_cfmm_economic_arbitrageFormula
+\[
+  \Delta x^* = f(\text{reserves}, \pi)
+\]
+The optimal arbitrage trade size is a deterministic function of reserves and
+oracle price. (Bartoletti Theorem~3.)
+\end{invariant}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\subsection{Tier 3: Rate Properties (CFMM-11 through CFMM-14)}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\begin{invariant}{CFMM-11}{Monotonicity}
+% Kontrol: prove_cfmm_rate_monotonicity
+\[
+  \Delta x_1 \leq \Delta x_2 \;\implies\; SX(\Gamma, \Delta x_1) \geq SX(\Gamma, \Delta x_2)
+\]
+Larger trades get worse rates (price impact).
+\end{invariant}
+
+\begin{invariant}{CFMM-12}{Homogeneity}
+% Kontrol: prove_cfmm_rate_homogeneity
+\[
+  SX(k \cdot \Gamma, k \cdot \Delta x) = SX(\Gamma, \Delta x)
+\]
+Scaling reserves and trade size equally preserves the swap rate.
+\end{invariant}
+
+\begin{invariant}{CFMM-13}{Additivity (no free lunch)}
+% Kontrol: prove_cfmm_rate_additivity
+\[
+  SX(\Gamma, \Delta x_1 + \Delta x_2) \leq SX(\Gamma, \Delta x_1)
+\]
+Splitting a trade does not improve the average rate.
+\end{invariant}
+
+\begin{invariant}{CFMM-14}{Reversibility (zero-fee)}
+% Kontrol: prove_cfmm_rate_reversibility
+\[
+  \texttt{swap}(\Delta x) \;\text{then}\; \texttt{swap}(-\Delta y)
+  \;\longrightarrow\; \text{original state}
+\]
+In the absence of fees, a round-trip swap returns to the original reserves.
+\end{invariant}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\subsection{Tier 4: State Machine Properties (CFMM-15 through CFMM-19)}
+% ══════════════════════════════════════════════════════════════════════════════
+
+Source: Formal State-Machine Models for Uniswap v3 \cite{fsm2024uniswap}.
+
+\begin{invariant}{CFMM-15}{$\varepsilon$-slack product invariant}
+% Kontrol: prove_cfmm_fsm_slackProduct
+\[
+  |x \cdot y - L^2| \leq \varepsilon \quad \text{for the active tick}
+\]
+The product of reserves at the active tick equals $L^2$ within rounding tolerance.
+
+\textit{Note:} For this CFMM, the invariant is $y + \ln(x) + 1 - x = 0$, not $xy = L^2$.
+This invariant adapts to: $|\psi(x/L, y/L)| \leq \varepsilon$.
+\end{invariant}
+
+\begin{invariant}{CFMM-16}{Non-negativity}
+% Kontrol: prove_cfmm_fsm_nonNegativity
+\[
+  x \geq 0 \;\land\; y \geq 0 \;\land\; L_{\text{act}} \geq 0
+\]
+Reserves and active liquidity are never negative.
+\end{invariant}
+
+\begin{invariant}{CFMM-17}{Resource bounds}
+% Kontrol: prove_cfmm_fsm_resourceBounds
+\[
+  x \leq 2^{128} - 1 \;\land\; y \leq 2^{128} - 1
+\]
+Reserves fit within EVM uint128 bounds.
+\end{invariant}
+
+\begin{invariant}{CFMM-18}{No rounding arbitrage}
+% Kontrol: prove_cfmm_fsm_noRoundingArbitrage
+A repeated swap cycle cannot extract value due to rounding.
+\[
+  \sum_{\text{cycle}} \Delta y_{\text{out}} \leq \sum_{\text{cycle}} \Delta x_{\text{in}}
+  \quad \text{(in numeraire terms)}
+\]
+\end{invariant}
+
+\begin{invariant}{CFMM-19}{Cross-tick invariant}
+% Kontrol: prove_cfmm_fsm_crossTick
+$L_{\text{act}}$ updates correctly when a swap crosses a tick boundary:
+\[
+  L_{\text{act}}' = L_{\text{act}} + \text{liquidityNet}(i_{\text{crossed}})
+\]
+\end{invariant}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\subsection{Tier 5: Replication Properties (CFMM-20 through CFMM-25)}
+% ══════════════════════════════════════════════════════════════════════════════
+
+Source: Angeris et al.\ \cite{angeris2021replicating,angeris2023geometry}.
+
+\begin{invariant}{CFMM-20}{Replication accuracy}
+% Kontrol: prove_cfmm_replication_accuracy
+\[
+  \{\VLP(p)\} \;\longrightarrow\; \text{evolve}(p \to p')
+  \;\longrightarrow\; \{|\text{LP\_value}(p') - \VLP(p')| \leq \varepsilon\}
+\]
+where $\VLP(p) = \ln(1+p)$ and $\varepsilon = 0$ (replication-preserving fees,
+\cref{thm:zero-error}).
+\end{invariant}
+
+\begin{invariant}{CFMM-21}{LP payoff concavity}
+% Kontrol: prove_cfmm_replication_payoffConcavity
+\[
+  \{p_1 < p_2 < p_3\} \;\longrightarrow\;
+  \{\VLP(p_2) \geq \lambda \cdot \VLP(p_1) + (1-\lambda) \cdot \VLP(p_3)\}
+\]
+for all $\lambda \in [0,1]$ with $p_2 = \lambda p_1 + (1-\lambda) p_3$.
+Holds because $\VLP''(p) = -1/(1+p)^2 < 0$ (\cref{prop:concavity}).
+\end{invariant}
+
+\begin{invariant}{CFMM-22}{Reserve monotonicity}
+% Kontrol: prove_cfmm_replication_reserveMonotonicity
+\[
+  \{p' > p\} \;\longrightarrow\; \{x(p') \leq x(p) \;\land\; y(p') \geq y(p)\}
+\]
+where $x(p) = 1/(1+p)$ is decreasing and $y(p) = \ln(1+p) - p/(1+p)$ is increasing
+(\cref{lem:reserve-monotone}).
+\end{invariant}
+
+\begin{invariant}{CFMM-23}{Boundary reserves}
+% Kontrol: prove_cfmm_replication_boundaryReserves
+\begin{align*}
+  &\{p \to 0\} \;\longrightarrow\; \{x \to 1 \;\land\; y \to 0\} \\
+  &\{p \to \infty\} \;\longrightarrow\; \{x \to 0 \;\land\; y \to \infty\}
+\end{align*}
+(\cref{lem:boundaries}).
+\end{invariant}
+
+\begin{invariant}{CFMM-24}{Price-reserve consistency}
+% Kontrol: prove_cfmm_replication_priceReserveConsistency
+\[
+  p = -\frac{\partial\psi/\partial x}{\partial\psi/\partial y}
+    = \frac{1-x}{x}
+\]
+consistent with $x(p) = 1/(1+p)$ (\cref{prop:spot-price}).
+\end{invariant}
+
+\begin{invariant}{CFMM-25}{Trading function concavity}
+% Kontrol: prove_cfmm_replication_tradingFunctionConcavity
+$\psi(x,y) = y + \ln(x) + 1 - x$ is concave: the Hessian
+$H = \text{diag}(-1/x^2, 0)$ is negative semidefinite for all $x > 0$
+(\cref{prop:psi-concave}).
+\end{invariant}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\subsection{Tier 6: Perpetual Properties (CFMM-26 through CFMM-27)}
+% ══════════════════════════════════════════════════════════════════════════════
+
+Source: Angeris et al.\ \cite{angeris2022perpetuals}.
+
+\begin{invariant}{CFMM-26}{Funding rate convergence}
+% Kontrol: prove_cfmm_perpetual_fundingConvergence
+\[
+  \{|p_{\text{mark}} - p_{\text{index}}| > \delta\}
+  \;\longrightarrow\; \text{funding}(\text{liquidityEvent})
+  \;\longrightarrow\; \{|p_{\text{mark}}' - p_{\text{index}}'| < |p_{\text{mark}} - p_{\text{index}}|\}
+\]
+The funding mechanism drives mark-index convergence (\cref{prop:convergence}).
+\end{invariant}
+
+\begin{invariant}{CFMM-27}{Funding rate bounds}
+% Kontrol: prove_cfmm_perpetual_fundingBounds
+\[
+  |\feefund(t)| \leq \fee_{\max} - \feebase
+\]
+ensuring $\fee(t) = \feebase + \feefund(t) \in [0, \fee_{\max}]$.
+\end{invariant}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\subsection{Tier 7: Fee Concentration Derivative Properties (CFMM-28 through CFMM-31)}
+% ══════════════════════════════════════════════════════════════════════════════
+
+\begin{invariant}{CFMM-28}{Oracle state consistency}
+% Kontrol: prove_cfmm_feeconc_oracleConsistency
+\[
+  \{B_T = \texttt{hook.feeConcentrationIndex()}\}
+  \;\longrightarrow\;
+  \{p_{\text{oracle}} = B_T / (1 - B_T)\}
+\]
+The oracle price derived from hook state matches the odds-ratio mapping.
+\end{invariant}
+
+\begin{invariant}{CFMM-29}{Jump-adjusted replication}
+% Kontrol: prove_cfmm_feeconc_jumpAdjusted
+\[
+  \{B_T \text{ jumps from } b \text{ to } b'\}
+  \;\longrightarrow\;
+  \{\Delta\text{LP\_value} \leq \VLP(b'/(1-b')) - \VLP(b/(1-b))\}
+\]
+Discrete jumps in the index at liquidity events do not cause LP losses beyond the
+payoff change (\cref{thm:jump-safety}).
+\end{invariant}
+
+\begin{invariant}{CFMM-30}{Liquidity event settlement}
+% Kontrol: prove_cfmm_feeconc_liquidityEventSettlement
+\[
+  \{\texttt{afterAddLiquidity} \lor \texttt{afterRemoveLiquidity}\}
+  \;\longrightarrow\;
+  \{B_T \text{ updated} \;\land\; \text{funding settled} \;\land\; \text{P\&L realized}\}
+\]
+Every liquidity event triggers oracle update, funding settlement, and P\&L
+realization atomically.
+\end{invariant}
+
+\begin{invariant}{CFMM-31}{Index boundedness}
+% Kontrol: prove_cfmm_feeconc_indexBoundedness
+\[
+  0 \leq B_T \leq 1
+\]
+always, since $B_T = 1 - A_T$ and $A_T \in [0, 1]$. This ensures
+$p = B_T/(1-B_T) \in [0, \infty)$ and reserves remain well-defined.
+\end{invariant}

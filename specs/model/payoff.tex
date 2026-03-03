@@ -1,0 +1,84 @@
+% payoff.tex — Payoff definition, convexity analysis
+% Kontrol: prove_cfmm_replication_payoffConcavity
+
+\section{Payoff Definition}\label{sec:payoff}
+
+\subsection{Fee Concentration Index}
+
+The fee concentration index $\AT$ is a path-dependent, HHI-weighted measure of adverse competition
+in liquidity provision. It is defined as:
+\begin{equation}\label{eq:concentration-index}
+  \AT = \Bigl(\sum_{k} \thetapos_k \cdot (x_k)^2 \Bigr)^{1/2}
+\end{equation}
+where the sum runs over all positions removed up to swap count $T$, and:
+\begin{itemize}
+  \item $x_k = \dfrac{\text{feeGrowthInside}(\text{position}_k, \text{tickRange})}%
+                     {\text{feeGrowth}(\text{tickRange})}$
+        is the fee share captured by position $k$;
+  \item $\thetapos_k = \dfrac{1}{\text{lifetime}(\text{position}_k)}$
+        is the sophistication weight, where
+        $\text{lifetime}(\text{position}_k) = \text{swapCount}(\text{removal}) - \text{swapCount}(\text{creation})$;
+  \item $\thetapos_k = 1$ for JIT positions (lifetime $= 1$).
+\end{itemize}
+
+The index satisfies $\AT \in [0,1]$ and updates at every \texttt{afterRemoveLiquidity} event.
+
+\subsection{Fee Dispersion Index}
+
+We define the fee dispersion index as:
+\begin{equation}\label{eq:dispersion-index}
+  \BT = 1 - \AT
+\end{equation}
+so that $\BT \in [0,1]$, with $\BT = 1$ indicating no concentration (competitive equilibrium)
+and $\BT = 0$ indicating full concentration (single JIT monopoly).
+
+\subsection{Derivative Perspective}
+
+\begin{itemize}
+  \item \textbf{PLP (passive LP)} is \textbf{LONG} the derivative: benefits from low concentration
+        (high $\BT$), buys protection against adverse competition.
+  \item \textbf{JIT (just-in-time LP)} is \textbf{SHORT} the derivative: benefits from high
+        concentration (low $\BT$), earns premium for providing the concentration risk.
+\end{itemize}
+
+The LP of this CFMM holds the LONG side.
+
+\subsection{LP Payoff Function}
+
+\begin{definition}[LP Payoff]\label{def:lp-payoff}
+The LP payoff as a function of the fee dispersion index price $p$ is:
+\begin{equation}\label{eq:lp-payoff}
+  \VLP(p) = \ln(1 + p)
+\end{equation}
+where $p = \BT / (1 - \BT)$ is the odds-ratio mapping from $\BT$ to price space,
+with $p \in [0, \infty)$ for $\BT \in [0, 1)$.
+\end{definition}
+
+\subsection{Convexity Analysis}
+
+\begin{proposition}[Concavity]\label{prop:concavity}
+$\VLP(p) = \ln(1+p)$ is strictly concave on $(0, \infty)$.
+\end{proposition}
+
+\begin{proof}
+\begin{align}
+  \VLP'(p)  &= \frac{1}{1+p} > 0 \quad \forall\, p > 0 \label{eq:V-first-deriv}\\[4pt]
+  \VLP''(p) &= -\frac{1}{(1+p)^2} < 0 \quad \forall\, p > 0 \label{eq:V-second-deriv}
+\end{align}
+Since $\VLP'' < 0$ everywhere on the domain, $\VLP$ is strictly concave. \qedhere
+\end{proof}
+
+\begin{proposition}[Monotonicity]\label{prop:monotonicity}
+$\VLP(p) = \ln(1+p)$ is strictly increasing on $[0, \infty)$.
+\end{proposition}
+
+\begin{proof}
+$\VLP'(p) = 1/(1+p) > 0$ for all $p \geq 0$. \qedhere
+\end{proof}
+
+\begin{remark}
+Since $\VLP$ is both monotone non-decreasing and strictly concave, it satisfies the requirements
+of both the oracle-assisted framework \cite{angeris2021replicating} and the oracle-free framework
+\cite{angeris2022replicating}. We use the oracle-assisted framework because the hook's own state
+serves as the oracle for $\BT$.
+\end{remark}

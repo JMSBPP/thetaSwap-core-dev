@@ -1,0 +1,77 @@
+% preamble.tex — Shared packages, notation, theorem environments
+% Fee Concentration Derivative CFMM Specification
+
+% ── Packages ──────────────────────────────────────────────────────────────────
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{enumitem}
+
+% ── Theorem environments ──────────────────────────────────────────────────────
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+
+% ── Invariant environment (Hoare triples) ─────────────────────────────────────
+\newcounter{invariant}
+\newenvironment{invariant}[2]{% #1 = ID (e.g., CFMM-01), #2 = Name
+  \refstepcounter{invariant}%
+  \par\medskip\noindent\textbf{#1} (\textit{#2}).\quad
+}{\par\medskip}
+
+% ── Notation ──────────────────────────────────────────────────────────────────
+%
+% CASING CONVENTION:
+%   Mathematical derivations (Angeris papers): lowercase x, y for reserves.
+%   TDD / Solidity context: CAPITAL X, Y (mapping to ReserveX, ReserveY UDVTs).
+%   This document uses the Angeris convention (lowercase) throughout.
+%   The mapping table below connects to the TDD notation.
+%
+% ── Reserve and liquidity ─────────────────────────────────────────────────────
+% x           = risky asset reserve (feeConcentrationToken)     → ReserveX
+% y           = numeraire reserve (underlying pool token)       → ReserveY
+% L           = liquidity parameter                             → Liquidity
+% u           = x/L (per-liquidity risky reserve)
+%
+% ── Pricing ───────────────────────────────────────────────────────────────────
+% p           = spot price of risky asset in numeraire           → SqrtPriceX96 (via conversion)
+% i_c, i_l, i_u = current, lower, upper tick indices            → TickIndex
+%
+% ── Payoff and trading function ───────────────────────────────────────────────
+\newcommand{\VLP}{V_{\mathrm{LP}}}          % LP payoff function
+\newcommand{\psi}{\psi}                     % trading function ψ(x,y)
+\newcommand{\TradingSet}{\mathcal{S}}       % trading set S
+%
+% ── Fee concentration index ───────────────────────────────────────────────────
+\newcommand{\BT}{B_T}                       % fee dispersion index at T  → IndexValue
+\newcommand{\AT}{A_T}                       % fee concentration index (= 1 - B_T)
+\newcommand{\thetapos}{\theta}              % position sophistication weight
+%
+% ── Fees and funding ──────────────────────────────────────────────────────────
+\newcommand{\fee}{\varphi}                  % trading fee φ             → FeeRate
+\newcommand{\feebase}{\varphi_{\text{base}}}
+\newcommand{\feefund}{\varphi_{\text{fund}}}
+\newcommand{\Fx}{F_x}                      % fee accumulator X         → FeeAccumX
+\newcommand{\Fy}{F_y}                      % fee accumulator Y         → FeeAccumY
+\newcommand{\fundrate}{r}                   % funding rate
+%
+% ── Payoff parameter ──────────────────────────────────────────────────────────
+\newcommand{\K}{\mathcal{K}}                % payoff parameter (avoids collision)
+%
+% ── Notation mapping table (Angeris → TDD) ────────────────────────────────────
+% | Math (this doc) | TDD UDVT          | Description                          |
+% |-----------------|-------------------|--------------------------------------|
+% | x               | ReserveX          | Risky reserve (feeConcentrationToken)|
+% | y               | ReserveY          | Numeraire reserve                    |
+% | L               | Liquidity         | Liquidity parameter (uint128)        |
+% | p               | SqrtPriceX96      | Spot price (via sqrt conversion)     |
+% | φ               | FeeRate           | Trading fee rate (uint24)            |
+% | F_x, F_y        | FeeAccumX/Y       | Fee accumulators (uint256)           |
+% | B_T             | IndexValue        | Fee dispersion index (uint256)       |
+% | i_c, i_l, i_u   | TickIndex         | Tick indices (int24)                 |

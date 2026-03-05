@@ -1,15 +1,18 @@
 """Tests for Dune MCP JSON → JAX array ingestion."""
 from __future__ import annotations
 
+import math
+
 import jax.numpy as jnp
 from econometrics.ingest import (
     approximate_mint_date,
+    build_exit_panel,
     build_lagged_positions,
     compute_lagged_treatment,
     ingest_daily_panel,
     merge_jit_instrument,
 )
-from econometrics.types import DailyPanelRow
+from econometrics.types import DailyPanelRow, ExitPanelRow
 
 
 def test_ingest_daily_panel_basic() -> None:
@@ -144,3 +147,79 @@ def test_build_lagged_positions_excludes_short_coverage() -> None:
     positions = build_lagged_positions(raw, SAMPLE_DAILY_AT, SAMPLE_IL, lag_days=2)
     # mint=Dec 20, burn-2=Dec 19 -> range [Dec 20, Dec 19] -> empty -> excluded
     assert len(positions) == 0
+
+
+# ── Exit panel tests ──────────────────────────────────────────────────
+
+PANEL_DAILY_AT: dict[str, float] = {
+    "2025-12-20": 0.10,
+    "2025-12-21": 0.15,
+    "2025-12-22": 0.20,
+    "2025-12-23": 0.12,
+    "2025-12-24": 0.18,
+}
+
+PANEL_IL: dict[str, float] = {
+    "2025-12-20": 0.005,
+    "2025-12-21": 0.008,
+    "2025-12-22": 0.012,
+    "2025-12-23": 0.006,
+    "2025-12-24": 0.010,
+}
+
+
+def test_build_exit_panel_single_position() -> None:
+    """A single position alive for 3 days produces 3 rows, last one exited=1."""
+    raw = [("2025-12-22", 14400, 0.20)]
+    panel = build_exit_panel(raw, PANEL_DAILY_AT, PANEL_IL, lag_days=1)
+    assert len(panel) >= 2  # at least the days with lagged A_T available
+    assert all(isinstance(r, ExitPanelRow) for r in panel)
+    exits = [r for r in panel if r.exited == 1]
+    assert len(exits) == 1
+    assert exits[0].day == "2025-12-22"
+    survived = [r for r in panel if r.exited == 0]
+    assert len(survived) >= 1
+
+
+def test_build_exit_panel_lagged_a_t() -> None:
+    """Treatment uses A_T from (day - lag_days), not same day."""
+    raw = [("2025-12-22", 14400, 0.20)]
+    panel = build_exit_panel(raw, PANEL_DAILY_AT, PANEL_IL, lag_days=1)
+    row_21 = [r for r in panel if r.day == "2025-12-21"]
+    if row_21:
+        assert row_21[0].a_t_lagged == 0.10  # daily_at_map["2025-12-20"]
+    row_22 = [r for r in panel if r.day == "2025-12-22"]
+    assert row_22[0].a_t_lagged == 0.15  # daily_at_map["2025-12-21"]
+
+
+def test_build_exit_panel_log_age() -> None:
+    """log_age is log(days since mint), floored at log(1)=0."""
+    raw = [("2025-12-22", 14400, 0.20)]
+    panel = build_exit_panel(raw, PANEL_DAILY_AT, PANEL_IL, lag_days=1)
+    row_20 = [r for r in panel if r.day == "2025-12-20"]
+    if row_20:
+        assert row_20[0].log_age == 0.0  # age=0 -> log(max(1,0)) = 0
+    row_22 = [r for r in panel if r.day == "2025-12-22"]
+    assert abs(row_22[0].log_age - math.log(2)) < 1e-6  # age=2
+
+
+def test_build_exit_panel_excludes_jit() -> None:
+    """Positions with blocklife <= 1 block are excluded (JIT)."""
+    raw = [("2025-12-22", 1, 0.20)]
+    panel = build_exit_panel(raw, PANEL_DAILY_AT, PANEL_IL, lag_days=1)
+    assert len(panel) == 0
+
+
+def test_build_exit_panel_il_lookup() -> None:
+    """IL comes from il_map on the observation day."""
+    raw = [("2025-12-22", 14400, 0.20)]
+    panel = build_exit_panel(raw, PANEL_DAILY_AT, PANEL_IL, lag_days=1)
+    row_21 = [r for r in panel if r.day == "2025-12-21"]
+    if row_21:
+        assert row_21[0].il == 0.008
+
+
+def test_build_exit_panel_empty_input() -> None:
+    """Empty positions list returns empty panel."""
+    panel = build_exit_panel([], PANEL_DAILY_AT, PANEL_IL, lag_days=1)
+    assert panel == []

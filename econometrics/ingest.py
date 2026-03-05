@@ -4,9 +4,10 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import date, timedelta
 from statistics import median as _median
+import math
 from typing import Sequence
 
-from econometrics.types import DailyPanelRow, DuneRow, LaggedPositionRow, PositionRow
+from econometrics.types import DailyPanelRow, DuneRow, ExitPanelRow, LaggedPositionRow, PositionRow
 
 BLOCKS_PER_DAY: float = 7200.0
 
@@ -144,3 +145,61 @@ def build_lagged_positions(
             il_proxy=il_map.get(burn_date, 0.0),
         ))
     return result
+
+
+def build_exit_panel(
+    raw_positions: list[tuple[str, int, float]],
+    daily_at_map: dict[str, float],
+    il_map: dict[str, float],
+    lag_days: int = 1,
+) -> list[ExitPanelRow]:
+    """Build position-day panel for exit hazard model.
+
+    For each position, identifies the days it was alive within the
+    daily_at_map window. Creates one ExitPanelRow per position-day:
+    exited=1 on burn_date, 0 on all prior days.
+
+    Treatment variable (a_t_lagged) uses A_T from (day - lag_days).
+    Excludes rows where lagged A_T is unavailable.
+    Excludes JIT positions (blocklife <= 1 block).
+    """
+    sorted_days = sorted(daily_at_map.keys())
+    if not sorted_days:
+        return []
+
+    window_start = date.fromisoformat(sorted_days[0])
+    window_end = date.fromisoformat(sorted_days[-1])
+
+    rows: list[ExitPanelRow] = []
+    for idx, (burn_date_str, blocklife, _exit_at) in enumerate(raw_positions):
+        if blocklife <= 1:
+            continue
+
+        mint_date_str = approximate_mint_date(burn_date_str, blocklife)
+        mint_d = date.fromisoformat(mint_date_str)
+        burn_d = date.fromisoformat(burn_date_str)
+
+        obs_start = max(mint_d, window_start)
+        obs_end = min(burn_d, window_end)
+
+        d = obs_start
+        while d <= obs_end:
+            day_str = d.isoformat()
+            lag_d = d - timedelta(days=lag_days)
+            lag_key = lag_d.isoformat()
+            if lag_key not in daily_at_map:
+                d += timedelta(days=1)
+                continue
+
+            age_days = (d - mint_d).days
+            rows.append(ExitPanelRow(
+                position_idx=idx,
+                day=day_str,
+                exited=1 if d == burn_d else 0,
+                a_t_lagged=daily_at_map[lag_key],
+                il=il_map.get(day_str, 0.0),
+                log_age=math.log(max(1, age_days)),
+            ))
+            d += timedelta(days=1)
+
+    return rows

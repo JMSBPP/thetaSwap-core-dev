@@ -1,14 +1,18 @@
 ---
-work_package_id: "WP01"
-title: "Adapter Diamond Storage"
-lane: "planned"
+work_package_id: WP01
+title: Adapter Diamond Storage
+lane: "doing"
 dependencies: []
-subtasks: ["T001", "T002", "T003"]
-requirement_refs: ["FR-007"]
+base_branch: 001-fci-coprimary-diamond
+base_commit: 8f9834420d38a798ea1264285e4d6b2b6dc8a992
+created_at: '2026-03-06T16:51:19.497443+00:00'
+subtasks: [T001, T002, T003]
+shell_pid: "172730"
 history:
-  - date: "2026-03-06"
-    action: "created"
-    by: "spec-kitty.tasks"
+- date: '2026-03-06'
+  action: created
+  by: spec-kitty.tasks
+requirement_refs: [FR-007]
 ---
 
 # WP01: Adapter Diamond Storage

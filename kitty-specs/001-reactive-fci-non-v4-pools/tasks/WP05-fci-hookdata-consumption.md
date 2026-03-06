@@ -8,6 +8,7 @@ base_commit: a6dd8e55f924aaa54dd9a9fe09936656fd73f319
 created_at: '2026-03-06T18:11:35.890040+00:00'
 subtasks: [T020, T021, T022]
 shell_pid: "205020"
+agent: "claude-opus"
 history:
 - date: '2026-03-06'
   action: created
@@ -98,3 +99,7 @@ Currently FeeConcentrationIndex reads tick and fee data from PoolManager via ext
 
 - **hookData collision**: Other V4 hooks might pass non-empty hookData for legitimate V4 reasons. Consider using a magic prefix byte or checking `key.hooks == reactiveAdapter` to distinguish paths.
 - **Regression on V4 path**: Must verify existing tests pass unchanged.
+
+## Activity Log
+
+- 2026-03-06T18:11:35Z – claude-opus – shell_pid=205020 – lane=doing – Assigned agent via workflow command

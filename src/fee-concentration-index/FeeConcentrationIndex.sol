@@ -21,7 +21,7 @@ import {
 import {TickRangeRegistryLib} from "./types/TickRangeRegistryMod.sol";
 import {getCurrentTick, getFeeGrowthInside0, getPositionFeeGrowthInsideLast0} from "./types/FeeGrowthReaderMod.sol";
 import {FeeShareRatio, fromFeeGrowthDelta} from "./types/FeeShareRatioMod.sol";
-import {AccumulatedHHI} from "./types/AccumulatedHHIMod.sol";
+import {FeeConcentrationState} from "./types/FeeConcentrationStateMod.sol";
 import {SwapCount} from "./types/SwapCountMod.sol";
 import {BlockCount} from "./types/BlockCountMod.sol";
 
@@ -173,7 +173,7 @@ contract FeeConcentrationIndex is BaseHook {
         // Accumulate HHI term if swaps occurred (zero-guard uses swap count)
         if (!swapLifetime.isZero()) {
             uint256 xSquaredQ128 = xk.square();
-            $.accumulatedHHI[poolId] = $.accumulatedHHI[poolId].addTerm(blockLifetime, xSquaredQ128);
+            $.fciState[poolId].addTerm(blockLifetime, xSquaredQ128);
         }
 
         // Clean up baseline
@@ -182,10 +182,11 @@ contract FeeConcentrationIndex is BaseHook {
         return (BaseHook.afterRemoveLiquidity.selector, BalanceDelta.wrap(0));
     }
 
-    function getIndex(PoolKey calldata key) external view returns (uint128 indexA, uint128 indexB) {
+    function getIndex(PoolKey calldata key) external view returns (uint128 indexA, uint256 thetaSum, uint256 posCount) {
         FeeConcentrationIndexStorage storage $ = fciStorage();
         PoolId poolId = PoolIdLibrary.toId(key);
-        indexA = $.accumulatedHHI[poolId].toIndexA();
-        indexB = $.accumulatedHHI[poolId].toIndexB();
+        indexA = $.fciState[poolId].toIndexA();
+        thetaSum = $.fciState[poolId].thetaSum;
+        posCount = $.fciState[poolId].posCount;
     }
 }

@@ -2,34 +2,34 @@
 pragma solidity ^0.8.26;
 
 import {PoolId} from "v4-core/src/types/PoolId.sol";
-import {AccumulatedHHI} from "../types/AccumulatedHHIMod.sol";
+import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
+import {FeeConcentrationState} from "../types/FeeConcentrationStateMod.sol";
 import {TickRangeRegistry} from "../types/TickRangeRegistryMod.sol";
 import {TickRange, intersects} from "../types/TickRangeMod.sol";
 
-// Diamond storage for Fee Concentration Index.
-// All hook state lives here — the contract itself holds only logic.
+// Diamond storage for Fee Concentration Index HookFacet.
+// Runs via delegatecall in MasterHook's storage context.
+// Namespace: keccak256("thetaSwap.fci") — disjoint from MasterHook and DiamondCut slots.
 
 struct FeeConcentrationIndexStorage {
-    // Running HHI accumulator per pool: sum of (x_k^2 / lifetime)
-    mapping(PoolId => AccumulatedHHI) accumulatedHHI;
+    // Co-primary state per pool: (accumulatedSum, thetaSum, posCount)
+    mapping(PoolId => FeeConcentrationState) fciState;
     // Per-pool tick range registry (positions grouped by range, per-range swap counters)
     mapping(PoolId => TickRangeRegistry) registries;
     // Per-position snapshot of feeGrowthInside0X128 at add time.
-    // Delta = (current feeGrowthInside0 - baseline) gives fees earned during position lifetime.
-    // Used to compute x_k (fee share ratio) when the position is removed.
     mapping(PoolId => mapping(bytes32 => uint256)) feeGrowthBaseline0;
+    // PoolManager reference — stored in facet's own namespace, not read from MasterHook.
+    // MasterHook is protocol-agnostic and does not guarantee a poolManager field.
+    IPoolManager poolManager;
 }
 
-bytes32 constant FCI_STORAGE_SLOT = keccak256("FeeConcentrationIndex.storage");
+bytes32 constant FCI_STORAGE_SLOT = keccak256("thetaSwap.fci");
 
-// Transient storage slot for caching pre-swap tick (Cancun TSTORE/TLOAD)
-bytes32 constant TICK_BEFORE_SLOT = keccak256("FeeConcentrationIndex.tickBefore");
-// Transient storage slot for caching feeGrowthInsideLast0 before V4 updates it on removal
-bytes32 constant FEE_GROWTH_LAST0_SLOT = keccak256("FeeConcentrationIndex.feeGrowthLast0");
-// Transient storage slot for caching position liquidity before V4 updates it on removal
-bytes32 constant POS_LIQUIDITY_SLOT = keccak256("FeeConcentrationIndex.posLiquidity");
-// Transient storage slot for caching rangeFeeGrowthInside0 before V4 uninitializes ticks
-bytes32 constant RANGE_FEE_GROWTH0_SLOT = keccak256("FeeConcentrationIndex.rangeFeeGrowth0");
+// Transient storage slots (transaction-scoped, unaffected by delegatecall)
+bytes32 constant TICK_BEFORE_SLOT = keccak256("thetaSwap.fci.tickBefore");
+bytes32 constant FEE_GROWTH_LAST0_SLOT = keccak256("thetaSwap.fci.feeGrowthLast0");
+bytes32 constant POS_LIQUIDITY_SLOT = keccak256("thetaSwap.fci.posLiquidity");
+bytes32 constant RANGE_FEE_GROWTH0_SLOT = keccak256("thetaSwap.fci.rangeFeeGrowth0");
 
 function fciStorage() pure returns (FeeConcentrationIndexStorage storage s) {
     bytes32 slot = FCI_STORAGE_SLOT;
@@ -38,26 +38,12 @@ function fciStorage() pure returns (FeeConcentrationIndexStorage storage s) {
     }
 }
 
-// ── Storage accessors ──
+// ── PoolManager access ──
+// Reads from FCI's own diamond storage namespace.
+// Set once during facet initialization.
 
-function getAccumulatedHHI(PoolId poolId) view returns (AccumulatedHHI) {
-    return fciStorage().accumulatedHHI[poolId];
-}
-
-function setAccumulatedHHI(PoolId poolId, AccumulatedHHI value) {
-    fciStorage().accumulatedHHI[poolId] = value;
-}
-
-function setFeeGrowthBaseline0(PoolId poolId, bytes32 positionKey, uint256 value) {
-    fciStorage().feeGrowthBaseline0[poolId][positionKey] = value;
-}
-
-function getFeeGrowthBaseline0(PoolId poolId, bytes32 positionKey) view returns (uint256) {
-    return fciStorage().feeGrowthBaseline0[poolId][positionKey];
-}
-
-function deleteFeeGrowthBaseline0(PoolId poolId, bytes32 positionKey) {
-    delete fciStorage().feeGrowthBaseline0[poolId][positionKey];
+function _poolManager() view returns (IPoolManager) {
+    return fciStorage().poolManager;
 }
 
 // ── Transient storage helpers ──
@@ -77,8 +63,13 @@ function t_readTick() returns (int24 tick) {
 }
 
 function sortTicks(int24 a, int24 b) pure returns (int24 tickMin, int24 tickMax) {
-    tickMin = a < b ? a : b;
-    tickMax = a > b ? a : b;
+    if (a < b) {
+        tickMin = a;
+        tickMax = b;
+    } else {
+        tickMin = b;
+        tickMax = a;
+    }
 }
 
 function t_cacheRemovalData(uint256 feeLast0, uint128 posLiquidity, uint256 rangeFeeGrowth0) {
@@ -103,7 +94,7 @@ function t_readRemovalData() returns (uint256 feeLast0, uint128 posLiquidity, ui
     }
 }
 
-// ── Loop extracted from _afterSwap ──
+// ── Loop extracted from afterSwap ──
 
 function incrementOverlappingRanges(PoolId poolId, int24 tickMin, int24 tickMax) {
     FeeConcentrationIndexStorage storage $ = fciStorage();

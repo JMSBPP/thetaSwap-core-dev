@@ -12,7 +12,7 @@ import {FeeConcentrationIndex} from "../../../src/fee-concentration-index/FeeCon
 import {FeeConcentrationIndexStorage, fciStorage} from "../../../src/fee-concentration-index/modules/FeeConcentrationIndexStorageMod.sol";
 import {TickRange, fromTicks} from "../../../src/fee-concentration-index/types/TickRangeMod.sol";
 import {SwapCount} from "../../../src/fee-concentration-index/types/SwapCountMod.sol";
-import {AccumulatedHHI} from "../../../src/fee-concentration-index/types/AccumulatedHHIMod.sol";
+import {FeeConcentrationState} from "../../../src/fee-concentration-index/types/FeeConcentrationStateMod.sol";
 
 // Test harness: exposes _afterAddLiquidity as external for direct fuzz testing.
 // Also exposes storage views so properties can read harness state.
@@ -120,19 +120,23 @@ contract FeeConcentrationIndexHarness is FeeConcentrationIndex {
 
     function getAccumulatedHHI(PoolId poolId) external view returns (uint256) {
         FeeConcentrationIndexStorage storage $ = fciStorage();
-        return $.accumulatedHHI[poolId].unwrap();
+        return $.fciState[poolId].accumulatedSum;
     }
 
     function getIndexA(PoolKey calldata key) external view returns (uint128) {
         FeeConcentrationIndexStorage storage $ = fciStorage();
         PoolId poolId_ = PoolIdLibrary.toId(key);
-        return $.accumulatedHHI[poolId_].toIndexA();
+        return $.fciState[poolId_].toIndexA();
     }
 
-    function getIndexB(PoolKey calldata key) external view returns (uint128) {
+    function getThetaSum(PoolId poolId) external view returns (uint256) {
         FeeConcentrationIndexStorage storage $ = fciStorage();
-        PoolId poolId_ = PoolIdLibrary.toId(key);
-        return $.accumulatedHHI[poolId_].toIndexB();
+        return $.fciState[poolId].thetaSum;
+    }
+
+    function getPosCount(PoolId poolId) external view returns (uint256) {
+        FeeConcentrationIndexStorage storage $ = fciStorage();
+        return $.fciState[poolId].posCount;
     }
 
     function getTotalRangeLiquidity(PoolId poolId, int24 tickLower, int24 tickUpper) external view returns (uint128) {

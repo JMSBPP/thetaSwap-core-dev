@@ -12,7 +12,7 @@ import {PositionManager} from "@uniswap/v4-periphery/src/PositionManager.sol";
 import {PositionDescriptor} from "@uniswap/v4-periphery/src/PositionDescriptor.sol";
 
 import {FeeConcentrationIndexHarness} from "../harness/FeeConcentrationIndexHarness.sol";
-import {INDEX_ONE} from "../../../src/fee-concentration-index/types/AccumulatedHHIMod.sol";
+import {INDEX_ONE} from "../../../src/fee-concentration-index/types/FeeConcentrationStateMod.sol";
 import {FCITestHelper} from "../helpers/FCITestHelper.sol";
 
 // US3 integration tests: full add → swap → remove → index lifecycle.
@@ -25,7 +25,7 @@ contract FeeConcentrationIndexFullUnitTest is PosmTestSetup, FCITestHelper {
     PoolId poolId;
     address lp2;
 
-    // INDEX_ONE imported from AccumulatedHHIMod.sol (canonical source of truth)
+    // INDEX_ONE imported from FeeConcentrationStateMod.sol (canonical source of truth)
 
     function setUp() public {
         deployFreshManagerAndRouters();
@@ -83,12 +83,12 @@ contract FeeConcentrationIndexFullUnitTest is PosmTestSetup, FCITestHelper {
     //   - Because lifetime == 0, the HHI term is skipped entirely (division by zero guard)
     //   - accumulatedHHI remains 0
     //   - indexA = 0 (sqrt(0) = 0)
-    //   - indexB = INDEX_ONE (1.0 in Q128)
+    //   - (INDEX_ONE - indexA) = INDEX_ONE (1.0 in Q128)
     //
     // Interpretation:
     //   Theta (the swap-time clock) never started. Without swap activity there is
     //   no fee generation and therefore no concentration measurement. The index
-    //   correctly reports "no data" — indexB stays at its ceiling, meaning the
+    //   correctly reports "no data" — (INDEX_ONE - indexA) stays at its ceiling, meaning the
     //   system has not observed any concentration signal.
     // ═══════════════════════════════════════════════════════════════════════
 
@@ -114,9 +114,9 @@ contract FeeConcentrationIndexFullUnitTest is PosmTestSetup, FCITestHelper {
         assertEq(harness.getAccumulatedHHI(poolId), 0, "accumulatedHHI must be 0 when no swaps");
 
         // Index: A=0, B=1.0 — no concentration data
-        (uint128 indexA, uint128 indexB) = harness.getIndex(key);
+        (uint128 indexA, uint256 thetaSum_, uint256 posCount_) = harness.getIndex(key);
         assertEq(indexA, 0, "indexA must be 0: theta never started");
-        assertEq(indexB, INDEX_ONE, "indexB must be 1.0: no concentration observed");
+        assertEq((INDEX_ONE - indexA), INDEX_ONE, "(INDEX_ONE - indexA) must be 1.0: no concentration observed");
     }
 
     // Variant: storage is fully cleaned up after the position lifecycle.
@@ -150,9 +150,9 @@ contract FeeConcentrationIndexFullUnitTest is PosmTestSetup, FCITestHelper {
 
         assertEq(harness.getAccumulatedHHI(poolId), 0, "HHI still 0 after 3 idle cycles");
 
-        (uint128 indexA, uint128 indexB) = harness.getIndex(key);
+        (uint128 indexA, uint256 thetaSum_, uint256 posCount_) = harness.getIndex(key);
         assertEq(indexA, 0, "indexA still 0");
-        assertEq(indexB, INDEX_ONE, "indexB still 1.0");
+        assertEq((INDEX_ONE - indexA), INDEX_ONE, "(INDEX_ONE - indexA) still 1.0");
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -181,9 +181,9 @@ contract FeeConcentrationIndexFullUnitTest is PosmTestSetup, FCITestHelper {
         // square() = mulDiv(2^128-1, 2^128-1, 2^128) = 2^128 - 2 (1 wei below Q128)
         // toIndexA(2^128-2) → sqrt((2^128-2) << 128) → INDEX_ONE - 1 (rounding)
         // 1-wei precision loss from Q128 representation of 1.0 as (2^128-1)
-        (uint128 indexA, uint128 indexB) = harness.getIndex(key);
+        (uint128 indexA, uint256 thetaSum_, uint256 posCount_) = harness.getIndex(key);
         assertGe(indexA, INDEX_ONE - 1, "indexA must be max (within 1 wei): sole provider");
-        assertLe(indexB, 1, "indexB must be ~0: complement of max concentration");
+        assertLe((INDEX_ONE - indexA), 1, "(INDEX_ONE - indexA) must be ~0: complement of max concentration");
     }
 
     // TODO: partial removal via decreaseLiquidity (without burn) currently triggers
@@ -240,15 +240,14 @@ contract FeeConcentrationIndexFullUnitTest is PosmTestSetup, FCITestHelper {
 
         // indexA = sqrt(Q128/2) ≈ 0.707 * INDEX_ONE
         // sqrt(0.5) ≈ 0.7071067811865475
-        (uint128 indexA, uint128 indexB) = harness.getIndex(key);
+        (uint128 indexA, uint256 thetaSum_, uint256 posCount_) = harness.getIndex(key);
         uint256 expectedIndexA = uint256(INDEX_ONE) * 7071 / 10000;
         assertApproxEqRel(indexA, expectedIndexA, 0.001e18, "indexA should be ~0.707 * INDEX_ONE");
         assertGt(indexA, 0, "indexA > 0: concentration detected");
         assertLt(indexA, INDEX_ONE, "indexA < 1: not sole provider");
-        // indexB = 1 - indexA ≈ 0.293 * INDEX_ONE
-        assertEq(indexB, INDEX_ONE - indexA, "indexB must be 1 - indexA");
+        // (INDEX_ONE - indexA) = 1 - indexA ≈ 0.293 * INDEX_ONE
         uint256 expectedIndexB = uint256(INDEX_ONE) - expectedIndexA;
-        assertApproxEqRel(indexB, expectedIndexB, 0.001e18, "indexB should be ~0.293 * INDEX_ONE");
+        assertApproxEqRel((INDEX_ONE - indexA), expectedIndexB, 0.001e18, "(INDEX_ONE - indexA) should be ~0.293 * INDEX_ONE");
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -288,7 +287,7 @@ contract FeeConcentrationIndexFullUnitTest is PosmTestSetup, FCITestHelper {
         assertApproxEqAbs(hhi, expectedHHI, 3, "HHI should be ~5*Q128/9");
 
         // indexA = sqrt(5/9) = sqrt(5)/3 ≈ 0.7454 * INDEX_ONE
-        (uint128 indexA, uint128 indexB) = harness.getIndex(key);
+        (uint128 indexA, uint256 thetaSum_, uint256 posCount_) = harness.getIndex(key);
         uint256 expectedIndexA = uint256(INDEX_ONE) * 7454 / 10000;
         assertApproxEqRel(indexA, expectedIndexA, 0.001e18, "indexA should be ~0.7454 * INDEX_ONE");
 
@@ -296,10 +295,9 @@ contract FeeConcentrationIndexFullUnitTest is PosmTestSetup, FCITestHelper {
         uint256 equalCaseIndexA = uint256(INDEX_ONE) * 7071 / 10000;
         assertGt(indexA, equalCaseIndexA, "capital disparity increases concentration");
 
-        // indexB = 1 - indexA ≈ 0.2546 * INDEX_ONE
-        assertEq(indexB, INDEX_ONE - indexA, "indexB must be 1 - indexA");
+        // (INDEX_ONE - indexA) = 1 - indexA ≈ 0.2546 * INDEX_ONE
         uint256 expectedIndexB = uint256(INDEX_ONE) - expectedIndexA;
-        assertApproxEqRel(indexB, expectedIndexB, 0.001e18, "indexB should be ~0.2546 * INDEX_ONE");
+        assertApproxEqRel((INDEX_ONE - indexA), expectedIndexB, 0.001e18, "(INDEX_ONE - indexA) should be ~0.2546 * INDEX_ONE");
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -351,7 +349,7 @@ contract FeeConcentrationIndexFullUnitTest is PosmTestSetup, FCITestHelper {
         assertApproxEqAbs(hhi, expectedHHI, 3, "HHI should be ~3*Q128/16");
 
         // indexA = sqrt(3/16) = sqrt(3)/4 ≈ 0.433 * INDEX_ONE
-        (uint128 indexA, uint128 indexB) = harness.getIndex(key);
+        (uint128 indexA, uint256 thetaSum_, uint256 posCount_) = harness.getIndex(key);
         uint256 expectedIndexA = uint256(INDEX_ONE) * 4330 / 10000;
         assertApproxEqRel(indexA, expectedIndexA, 0.002e18, "indexA should be ~0.433 * INDEX_ONE");
 
@@ -359,10 +357,9 @@ contract FeeConcentrationIndexFullUnitTest is PosmTestSetup, FCITestHelper {
         uint256 equalExitIndexA = uint256(INDEX_ONE) * 7071 / 10000;
         assertLt(indexA, equalExitIndexA, "indexA < equal-exit case: block-duration dilution");
 
-        // indexB = 1 - indexA
-        assertEq(indexB, INDEX_ONE - indexA, "indexB must be 1 - indexA");
+        // (INDEX_ONE - indexA) = 1 - indexA
         uint256 expectedIndexB = uint256(INDEX_ONE) - expectedIndexA;
-        assertApproxEqRel(indexB, expectedIndexB, 0.002e18, "indexB should be ~0.567 * INDEX_ONE");
+        assertApproxEqRel((INDEX_ONE - indexA), expectedIndexB, 0.002e18, "(INDEX_ONE - indexA) should be ~0.567 * INDEX_ONE");
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -447,7 +444,7 @@ contract FeeConcentrationIndexFullUnitTest is PosmTestSetup, FCITestHelper {
         assertApproxEqAbs(hhi, expectedHHI, 5, "HHI should be ~8101/10000 * Q128");
 
         // indexA = sqrt(8101/10000) ≈ 0.9006 * INDEX_ONE
-        (uint128 indexA, uint128 indexB) = harness.getIndex(key);
+        (uint128 indexA, uint256 thetaSum_, uint256 posCount_) = harness.getIndex(key);
         uint256 expectedIndexA = uint256(INDEX_ONE) * 9006 / 10000;
         assertApproxEqRel(indexA, expectedIndexA, 0.002e18, "indexA should be ~0.900 * INDEX_ONE");
 
@@ -458,9 +455,8 @@ contract FeeConcentrationIndexFullUnitTest is PosmTestSetup, FCITestHelper {
         // Close to max (sole provider = 1.0)
         assertGt(indexA, uint128(uint256(INDEX_ONE) * 9 / 10), "indexA > 0.9: close to maximum concentration");
 
-        // indexB = 1 - indexA ≈ 0.100 * INDEX_ONE
-        assertEq(indexB, INDEX_ONE - indexA, "indexB must be 1 - indexA");
+        // (INDEX_ONE - indexA) = 1 - indexA ≈ 0.100 * INDEX_ONE
         uint256 expectedIndexB = uint256(INDEX_ONE) - expectedIndexA;
-        assertApproxEqRel(indexB, expectedIndexB, 0.02e18, "indexB should be ~0.100 * INDEX_ONE");
+        assertApproxEqRel((INDEX_ONE - indexA), expectedIndexB, 0.02e18, "(INDEX_ONE - indexA) should be ~0.100 * INDEX_ONE");
     }
 }

@@ -162,19 +162,20 @@ contract AfterRemoveLiquidityTest is Test, Deployers {
     // ── Test: getIndex returns correct values ──
 
     function test_getIndex_returnsCorrectValues() public {
-        // Before any removals, indices should be A=0, B=max
-        (uint128 indexA, uint128 indexB) = harness.getIndex(poolKey);
+        // Before any removals, indices should be A=0, thetaSum=0, posCount=0
+        (uint128 indexA, uint256 thetaSum_, uint256 posCount_) = harness.getIndex(poolKey);
         assertEq(indexA, 0, "indexA should be 0 with no removals");
-        assertEq(indexB, type(uint128).max, "indexB should be max with no removals");
+        assertEq(thetaSum_, 0, "thetaSum should be 0 with no removals");
+        assertEq(posCount_, 0, "posCount should be 0 with no removals");
 
         // Add, swap, remove to generate HHI
         _addLiquidity(-60, 60, 1e18);
         _swap(true, -100);
         _removeLiquidity(-60, 60, 1e18);
 
-        (uint128 indexA2, uint128 indexB2) = harness.getIndex(poolKey);
+        (uint128 indexA2, uint256 thetaSum2, uint256 posCount2) = harness.getIndex(poolKey);
         assertGt(indexA2, 0, "indexA should be > 0 after removal with fees");
-        assertLt(indexB2, type(uint128).max, "indexB should be < max after removal with fees");
-        assertEq(uint256(indexA2) + uint256(indexB2), type(uint128).max, "A + B = 1");
+        assertGt(thetaSum2, 0, "thetaSum should be > 0 after removal");
+        assertEq(posCount2, 0, "posCount should be 0 after all removed");
     }
 }

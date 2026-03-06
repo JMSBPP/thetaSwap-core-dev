@@ -13,7 +13,7 @@ import {PositionManager} from "@uniswap/v4-periphery/src/PositionManager.sol";
 import {PositionDescriptor} from "@uniswap/v4-periphery/src/PositionDescriptor.sol";
 
 import {FeeConcentrationIndexHarness} from "../harness/FeeConcentrationIndexHarness.sol";
-import {INDEX_ONE} from "../../../src/fee-concentration-index/types/AccumulatedHHIMod.sol";
+import {INDEX_ONE} from "../../../src/fee-concentration-index/types/FeeConcentrationStateMod.sol";
 import {FCITestHelper} from "../helpers/FCITestHelper.sol";
 
 contract FeeConcentrationIndexFullFuzzTest is PosmTestSetup, FCITestHelper {
@@ -128,13 +128,12 @@ contract FeeConcentrationIndexFullFuzzTest is PosmTestSetup, FCITestHelper {
 
         // Phase 5: Assert
         uint256 hhi = harness.getAccumulatedHHI(poolId);
-        (uint128 indexA, uint128 indexB) = harness.getIndex(key);
+        (uint128 indexA, uint256 thetaSum_, uint256 posCount_) = harness.getIndex(key);
 
         // Tolerance: rounding from Q128 integer division. Scale with N.
         uint256 hhiTolerance = n * 3;
         assertApproxEqAbs(hhi, expectedHHI, hhiTolerance, "Tier1: HHI mismatch");
         assertApproxEqAbs(uint256(indexA), expectedIndexA, n * 3, "Tier1: indexA mismatch");
-        assertEq(indexB, INDEX_ONE - indexA, "Tier1: indexB complement");
         assertLe(indexA, INDEX_ONE, "Tier1: indexA capped");
     }
 
@@ -202,12 +201,11 @@ contract FeeConcentrationIndexFullFuzzTest is PosmTestSetup, FCITestHelper {
 
         // Phase 5: Assert
         uint256 hhi = harness.getAccumulatedHHI(poolId);
-        (uint128 indexA, uint128 indexB) = harness.getIndex(key);
+        (uint128 indexA, uint256 thetaSum_, uint256 posCount_) = harness.getIndex(key);
 
         uint256 hhiTolerance = n * 3;
         assertApproxEqAbs(hhi, expectedHHI, hhiTolerance, "Tier2: HHI mismatch");
         assertApproxEqAbs(uint256(indexA), expectedIndexA, n * 3, "Tier2: indexA mismatch");
-        assertEq(indexB, INDEX_ONE - indexA, "Tier2: indexB complement");
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -249,12 +247,11 @@ contract FeeConcentrationIndexFullFuzzTest is PosmTestSetup, FCITestHelper {
         (uint256 expectedHHI, uint256 expectedIndexA) = _callOracle(liquidities, blockLifetimes);
 
         uint256 hhi = harness.getAccumulatedHHI(poolId);
-        (uint128 indexA, uint128 indexB) = harness.getIndex(key);
+        (uint128 indexA, uint256 thetaSum_, uint256 posCount_) = harness.getIndex(key);
 
         uint256 hhiTolerance = n * 3;
         assertApproxEqAbs(hhi, expectedHHI, hhiTolerance, "Tier3: HHI mismatch");
         assertApproxEqAbs(uint256(indexA), expectedIndexA, n * 3, "Tier3: indexA mismatch");
-        assertEq(indexB, INDEX_ONE - indexA, "Tier3: indexB complement");
     }
 
     // ═══════════════════════════════════════════════════════════════════
@@ -311,11 +308,10 @@ contract FeeConcentrationIndexFullFuzzTest is PosmTestSetup, FCITestHelper {
         (uint256 expectedHHI, uint256 expectedIndexA) = _callOracle(liquidities, blockLifetimes);
 
         uint256 hhi = harness.getAccumulatedHHI(poolId);
-        (uint128 indexA, uint128 indexB) = harness.getIndex(key);
+        (uint128 indexA, uint256 thetaSum_, uint256 posCount_) = harness.getIndex(key);
 
         uint256 hhiTolerance = n * 3;
         assertApproxEqAbs(hhi, expectedHHI, hhiTolerance, "Tier4: HHI mismatch");
         assertApproxEqAbs(uint256(indexA), expectedIndexA, n * 3, "Tier4: indexA mismatch");
-        assertEq(indexB, INDEX_ONE - indexA, "Tier4: indexB complement");
     }
 }

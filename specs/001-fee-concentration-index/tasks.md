@@ -1,174 +1,233 @@
-# Tasks: Fee Concentration Index
+# Tasks: Fee Concentration Index (v2 — Co-Primary State + Diamond Pattern)
 
 **Input**: Design documents from `specs/001-fee-concentration-index/`
-**Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/
-**Tests**: Included — TDD skill requires Kontrol proofs and fuzz tests before implementation.
-**Organization**: Tasks grouped by user story with TDD ordering (types → invariants → proofs → implementation → fuzz).
+**Prerequisites**: plan.md, spec.md (v2), invariants.md (21 invariants), data-model.md, contracts/
+**Tests**: Required — TDD skill mandates Kontrol proofs and fuzz tests before implementation.
+**Organization**: Tasks grouped by TDD phase, then by user story within implementation phases. Kontrol proofs ONE AT A TIME per TDD skill.
 
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
-- **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3, US4)
+- **[Story]**: Which user story this task belongs to (e.g., US1–US6)
 - Include exact file paths in descriptions
 
 ---
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-**Purpose**: Create directory structure and invariants document per TDD skill.
+**Purpose**: Create directory structure. Invariants already defined in `specs/001-fee-concentration-index/invariants.md` (21 invariants: INV-001–010, FCI-001–011).
 
-- [ ] T001 Create directory structure: `src/fee-concentration-index/types/`, `test/fee-concentration-index/kontrol/`, `test/fee-concentration-index/fuzz/`
-- [ ] T002 Write system invariants in `specs/001-fee-concentration-index/invariants.md` (~10 invariants in Hoare triple format per TDD Phase 2)
+- [ ] T001 Create directory structure: `src/fee-concentration-index/types/`, `test/fee-concentration-index/kontrol/`, `test/fee-concentration-index/fuzz/`, `test/fee-concentration-index/unit/`
+- [ ] T002 Verify invariants document `specs/001-fee-concentration-index/invariants.md` has 21 invariants in Hoare triple format (10 INV + 11 FCI)
 
-**Checkpoint**: Directory structure exists, invariants defined. Ready for type design.
+**Checkpoint**: Directory structure exists, 21 invariants defined. Ready for type design.
 
 ---
 
-## Phase 2: Foundational — Type Definitions (Blocking Prerequisites)
+## Phase 2: Type Definitions (TDD Phase 3 — BLOCKING)
 
-**Purpose**: Define all UDVTs and Mod files per TDD Phase 3. Types MUST compile. No business logic.
+**Purpose**: Define all UDVTs, structs, and Mod files. Types MUST compile. No business logic.
 
 **CRITICAL**: No user story implementation can begin until all types are defined and reviewed.
 
-- [ ] T003 [P] Define SwapCount UDVT in `src/fee-concentration-index/types/SwapCount.sol` — `type SwapCount is uint256;`
-- [ ] T004 [P] Define SwapCountMod with free functions in `src/fee-concentration-index/types/SwapCountMod.sol` — increment, unwrap, isZero, fromUint256
-- [ ] T005 [P] Define FeeShareRatio UDVT in `src/fee-concentration-index/types/FeeShareRatio.sol` — `type FeeShareRatio is uint256;`
-- [ ] T006 [P] Define FeeShareRatioMod with free functions in `src/fee-concentration-index/types/FeeShareRatioMod.sol` — fromFeeGrowth (Q128 division), square (mulDiv), unwrap
-- [ ] T007 [P] Define AccumulatedHHI UDVT in `src/fee-concentration-index/types/AccumulatedHHI.sol` — `type AccumulatedHHI is uint256;`
-- [ ] T008 [P] Define AccumulatedHHIMod with free functions in `src/fee-concentration-index/types/AccumulatedHHIMod.sol` — addTerm, toIndexA (sqrt), toIndexB (complement), unwrap
-- [ ] T009 Verify all types compile with `forge build` — no business logic, only type definitions and arithmetic helpers
+### Existing types (already implemented, verify compile)
 
-**Checkpoint**: All UDVTs compile. User review gate per TDD skill. Ready for proofs and implementation.
+- [ ] T003 [P] Verify `src/fee-concentration-index/types/BlockCountMod.sol` compiles — `type BlockCount is uint256` with unwrap, isZero, floorOne
+- [ ] T004 [P] Verify `src/fee-concentration-index/types/FeeShareRatioMod.sol` compiles — `type FeeShareRatio is uint128` with fromFeeGrowth, fromFeeGrowthDelta, square, unwrap, isZero
+- [ ] T005 [P] Verify `src/fee-concentration-index/types/SwapCountMod.sol` compiles — `type SwapCount is uint256` with increment, unwrap, isZero
+
+### New type: FeeConcentrationState (replaces AccumulatedHHIMod.sol)
+
+- [ ] T006 [US5] Create `src/fee-concentration-index/types/FeeConcentrationStateMod.sol` — struct FeeConcentrationState { uint256 accumulatedSum; uint256 thetaSum; uint256 posCount; } with free functions: addTerm, incrementPos, decrementPos, toIndexA, atNull, deltaPlus, toDeltaPlusPrice. `using {...} for FeeConcentrationState global`
+- [ ] T007 [US5] Delete `src/fee-concentration-index/types/AccumulatedHHIMod.sol` — replaced by FeeConcentrationStateMod.sol
+
+### Storage type update
+
+- [ ] T008 [US5] Update `src/fee-concentration-index/modules/FeeConcentrationIndexStorageMod.sol` — change `mapping(PoolId => AccumulatedHHI) accumulatedHHI` to `mapping(PoolId => FeeConcentrationState) fciState`
+
+### Interface update
+
+- [ ] T009 [US5] Update `src/fee-concentration-index/interfaces/IFeeConcentrationIndex.sol` — change `getIndex()` return from `(uint128 indexA, uint128 indexB)` to `(uint128 indexA, uint256 thetaSum, uint256 posCount)`
+
+- [ ] T010 Verify all types compile with `forge build --out out2` — no business logic, only type definitions and arithmetic helpers
+
+**Checkpoint**: All types compile. User review gate per TDD skill. Ready for proofs.
 
 ---
 
-## Phase 3: User Story 1 — Track Position Lifetimes (Priority: P1) MVP
+## Phase 3: Kontrol Proofs — FeeConcentrationState (TDD Phase 4)
 
-**Goal**: Track per-position swap counts that increment only when swaps use that position's liquidity. Positions grouped by tick range for O(1) lookup.
+**Purpose**: Scaffold formal proofs for co-primary state type. ONE proof at a time: build → prove → review → next.
 
-**Independent Test**: Deploy hook, add position covering active tick, execute N swaps through range, remove position, verify lifetime == N.
+**Covers invariants**: FCI-001 through FCI-011
 
-### Kontrol Proofs for US1
+- [ ] T011 [US5] Write Kontrol proof `prove_fci_indexBoundedness` in `test/fee-concentration-index/kontrol/FeeConcentrationState.k.sol` — FCI-001: 0 <= toIndexA(state) <= Q128. Build and prove.
+- [ ] T012 [US5] Write Kontrol proof `prove_fci_thetaSumNonNeg` — FCI-002: addTerm only increases thetaSum. Build and prove.
+- [ ] T013 [US5] Write Kontrol proof `prove_fci_posCountNonNeg` — FCI-003: decrementPos requires posCount > 0. Build and prove.
+- [ ] T014 [US5] Write Kontrol proof `prove_fci_deviationNonNeg` — FCI-005: deltaPlus(state) >= 0 for all valid states. Build and prove.
+- [ ] T015 [US5] Write Kontrol proof `prove_fci_deviationUpperBound` — FCI-006: deltaPlus(state) < Q128. Build and prove.
+- [ ] T016 [US5] Write Kontrol proof `prove_fci_coPrimaryConsistency` — FCI-007: same state produces same deltaPlus. Build and prove.
+- [ ] T017 [US5] Write Kontrol proof `prove_fci_priceNonNeg` — FCI-009: toDeltaPlusPrice(state) >= 0. Build and prove.
+- [ ] T018 [US5] Write Kontrol proof `prove_fci_priceMonotonicity` — FCI-010: higher deltaPlus → higher price. Build and prove.
+- [ ] T019 [US5] Write Kontrol proof `prove_fci_priceInvertibility` — FCI-011: delta = p*Q128/(Q128+p) round-trips. Build and prove.
+- [ ] T020 [US3] Write Kontrol proof `prove_accumulatedSum_monotonic` in `test/fee-concentration-index/kontrol/FeeConcentrationState.k.sol` — INV-008: addTerm only increases accumulatedSum. Build and prove.
+- [ ] T021 [US3] Write Kontrol proof `prove_indexA_capped_at_one` — INV-009: toIndexA capped at INDEX_ONE. Build and prove.
 
-- [ ] T010 [US1] Write Kontrol proof `prove_swapCount_increment_monotonic` in `test/fee-concentration-index/kontrol/SwapCount.k.sol` — SwapCount only increases
-- [ ] T011 [US1] Write Kontrol proof `prove_swapCount_initial_zero` in `test/fee-concentration-index/kontrol/SwapCount.k.sol` — SwapCount starts at 0
-- [ ] T012 [US1] Write Kontrol proof `prove_register_adds_position` in `test/fee-concentration-index/kontrol/TickRangeRegistry.k.sol` — registration adds position to correct range
-- [ ] T013 [US1] Write Kontrol proof `prove_deregister_removes_position` in `test/fee-concentration-index/kontrol/TickRangeRegistry.k.sol` — deregistration removes position cleanly
-- [ ] T014 [US1] Write Kontrol proof `prove_deregister_last_deletes_range` in `test/fee-concentration-index/kontrol/TickRangeRegistry.k.sol` — removing last position deletes range entry
+**Checkpoint**: All 11 FeeConcentrationState proofs pass. Delete old `test/fee-concentration-index/kontrol/AccumulatedHHI.k.sol`.
 
-### Implementation for US1
+---
 
-- [ ] T015 [US1] Implement TickRangeRegistryMod free functions in `src/fee-concentration-index/TickRangeRegistryMod.sol` — register, deregister, getPositionsInRange, computeRangeKey
-- [ ] T016 [US1] Implement PositionLifetimeMod free functions in `src/fee-concentration-index/PositionLifetimeMod.sol` — initPosition, incrementSwapCount, readLifetime, cleanupPosition
-- [ ] T017 [US1] Implement afterAddLiquidity logic: derive positionKey, initialize SwapCount to 0, register in TickRangePositionSet
-- [ ] T018 [US1] Implement afterSwap tick-range walking logic: read tick bitmap via StateLibrary.getTickBitmap(), identify overlapping ranges, increment SwapCount for all positions in range
+## Phase 4: Kontrol Proofs — Existing Types (TDD Phase 4 continued)
+
+**Purpose**: Proofs for SwapCount, TickRangeRegistry, FeeShareRatio types. ONE at a time.
+
+**Covers invariants**: INV-001 through INV-007, INV-010
+
+- [ ] T022 [US1] Write Kontrol proof `prove_swapCount_increment_monotonic` in `test/fee-concentration-index/kontrol/SwapCount.k.sol` — INV-001. Build and prove.
+- [ ] T023 [US1] Write Kontrol proof `prove_swapCount_initial_zero` — INV-002. Build and prove.
+- [ ] T024 [US1] Write Kontrol proof `prove_register_adds_position` in `test/fee-concentration-index/kontrol/TickRangeRegistry.k.sol` — INV-004. Build and prove.
+- [ ] T025 [US1] Write Kontrol proof `prove_deregister_removes_position` — INV-004. Build and prove.
+- [ ] T026 [US1] Write Kontrol proof `prove_deregister_last_deletes_range` — INV-005. Build and prove.
+- [ ] T027 [US2] Write Kontrol proof `prove_feeShareRatio_bounds` in `test/fee-concentration-index/kontrol/FeeShareRatio.k.sol` — INV-006. Build and prove.
+- [ ] T028 [US2] Write Kontrol proof `prove_feeShareRatio_zero_when_no_global_fees` — INV-007. Build and prove.
+- [ ] T029 [US3] Write Kontrol proof `prove_zero_lifetime_skipped` in `test/fee-concentration-index/kontrol/IndexUpdate.k.sol` — INV-010. Build and prove.
+
+**Checkpoint**: All existing-type proofs pass. Proof scaffold complete.
+
+---
+
+## Phase 5: Static Analysis Gate (TDD Phase 5)
+
+**Purpose**: Run static analysis on type scaffold BEFORE any implementation logic.
+
+- [ ] T030 Run Slither on `src/fee-concentration-index/` — zero findings required
+- [ ] T031 Run Semgrep smart contract rules on `src/fee-concentration-index/` — zero findings required
+
+**Checkpoint**: Static analysis clean on types. Ready for implementation.
+
+---
+
+## Phase 6: Implementation — US1 Track Position Lifetimes (Priority: P1)
+
+**Goal**: Track per-position swap counts, grouped by tick range for O(1) lookup.
+
+**Depends on**: Phase 2 (types), Phase 3–4 (proofs)
+
+- [ ] T032 [US1] Implement TickRangeRegistryMod free functions in `src/fee-concentration-index/types/TickRangeRegistryMod.sol` — register, deregister, getPositionsInRange, computeRangeKey (FR-001a, FR-002, FR-002b)
+- [ ] T033 [US1] Implement afterAddLiquidity logic in hook: derive positionKey, initialize SwapCount to 0, register in TickRangePositionSet, increment posCount (FR-002, FR-013)
+- [ ] T034 [US1] Implement afterSwap tick-range walking logic: read tick bitmap via StateLibrary, identify overlapping ranges, increment SwapCount (FR-001, FR-001b)
 
 ### Fuzz Tests for US1
 
-- [ ] T019 [P] [US1] Write fuzz test `testFuzz_swapCount_monotonic` in `test/fee-concentration-index/fuzz/PositionLifetime.t.sol`
-- [ ] T020 [P] [US1] Write fuzz test `testFuzz_register_deregister_roundtrip` in `test/fee-concentration-index/fuzz/TickRangeRegistry.t.sol`
-- [ ] T021 [P] [US1] Write fuzz test `testFuzz_only_active_range_incremented` in `test/fee-concentration-index/fuzz/TickRangeRegistry.t.sol` — positions outside swap range not incremented
+- [ ] T035 [P] [US1] Write fuzz test `testFuzz_swapCount_monotonic` in `test/fee-concentration-index/fuzz/PositionLifetime.t.sol`
+- [ ] T036 [P] [US1] Write fuzz test `testFuzz_register_deregister_roundtrip` in `test/fee-concentration-index/fuzz/TickRangeRegistry.t.sol`
+- [ ] T037 [P] [US1] Write fuzz test `testFuzz_only_active_range_incremented` in `test/fee-concentration-index/fuzz/TickRangeRegistry.t.sol` — INV-003
 
-**Checkpoint**: Position lifetime tracking works end-to-end. Kontrol proofs pass. Fuzz tests pass.
+**Checkpoint**: Position lifetime tracking works. Kontrol proofs + fuzz tests pass.
 
 ---
 
-## Phase 4: User Story 2 — Compute Fee Share Ratio (Priority: P1)
+## Phase 7: Implementation — US2 Compute Fee Share Ratio (Priority: P1)
 
-**Goal**: Compute x_k = feeGrowthInside / feeGrowthGlobal as Q128 value in [0, 1] at position removal.
+**Goal**: Compute x_k = feeGrowthInside / feeGrowthGlobal as Q128 in [0, 1] at removal.
 
-**Independent Test**: Deploy hook, add single position covering active tick, execute swaps generating fees, remove position, verify x_k == 1 (sole LP captures all fees).
+**Depends on**: Phase 2 (types), Phase 4 (FeeShareRatio proofs)
 
-### Kontrol Proofs for US2
-
-- [ ] T022 [US2] Write Kontrol proof `prove_feeShareRatio_bounds` in `test/fee-concentration-index/kontrol/FeeShareRatio.k.sol` — x_k always in [0, 2^128]
-- [ ] T023 [US2] Write Kontrol proof `prove_feeShareRatio_zero_when_no_global_fees` in `test/fee-concentration-index/kontrol/FeeShareRatio.k.sol` — x_k == 0 when feeGrowthGlobal == 0
-- [ ] T024 [US2] Write Kontrol proof `prove_feeShareRatio_square_no_overflow` in `test/fee-concentration-index/kontrol/FeeShareRatio.k.sol` — x_k^2 via mulDiv does not overflow
-
-### Implementation for US2
-
-- [ ] T025 [US2] Implement FeeConcentrationIndexMod.computeFeeShare in `src/fee-concentration-index/FeeConcentrationIndexMod.sol` — read StateLibrary.getFeeGrowthInside + getFeeGrowthGlobal, compute Q128 ratio
-- [ ] T026 [US2] Handle edge case: feeGrowthGlobal == 0 returns FeeShareRatio(0) per FR-011
+- [ ] T038 [US2] Implement fee share computation in hook afterRemoveLiquidity: read StateLibrary.getFeeGrowthInside, compute Q128 ratio (FR-005, FR-011)
 
 ### Fuzz Tests for US2
 
-- [ ] T027 [P] [US2] Write fuzz test `testFuzz_feeShareRatio_bounds` in `test/fee-concentration-index/fuzz/FeeShareRatio.t.sol` — x_k always <= 2^128
-- [ ] T028 [P] [US2] Write fuzz test `testFuzz_feeShareRatio_square_precision` in `test/fee-concentration-index/fuzz/FeeShareRatio.t.sol` — squaring preserves Q128 format
+- [ ] T039 [P] [US2] Write fuzz test `testFuzz_feeShareRatio_bounds` in `test/fee-concentration-index/fuzz/FeeShareRatio.t.sol` — x_k always <= 2^128
+- [ ] T040 [P] [US2] Write fuzz test `testFuzz_feeShareRatio_square_precision` in `test/fee-concentration-index/fuzz/FeeShareRatio.t.sol`
 
-**Checkpoint**: Fee share ratio computation works with Q128 precision. No overflow on squaring.
+**Checkpoint**: Fee share ratio computation works with Q128 precision. No overflow.
 
 ---
 
-## Phase 5: User Story 3 — Update Fee Concentration Index (Priority: P2)
+## Phase 8: Implementation — US3 Update Fee Concentration Index (Priority: P2)
 
-**Goal**: On position removal, compute theta_k = 1/lifetime, update accumulatedSum += theta_k * x_k^2, expose A_T = sqrt(accumulatedSum) and B_T = 1 - A_T via view function.
+**Goal**: On removal, compute theta, update accumulatedSum + thetaSum, expose (A_T, thetaSum, posCount).
 
-**Independent Test**: Deploy hook, add JIT position (lifetime=1, x_k=1), remove it, verify A_T == 1.
+**Depends on**: US1 (lifetime) and US2 (fee share) complete.
 
-**Depends on**: US1 (lifetime) and US2 (fee share ratio) must be complete.
-
-### Kontrol Proofs for US3
-
-- [ ] T029 [US3] Write Kontrol proof `prove_accumulatedHHI_monotonic` in `test/fee-concentration-index/kontrol/AccumulatedHHI.k.sol` — accumulatedSum only increases
-- [ ] T030 [US3] Write Kontrol proof `prove_indexA_capped_at_one` in `test/fee-concentration-index/kontrol/AccumulatedHHI.k.sol` — A_T <= 2^128 (capped at 1)
-- [ ] T031 [US3] Write Kontrol proof `prove_indexB_complement` in `test/fee-concentration-index/kontrol/AccumulatedHHI.k.sol` — B_T == 2^128 - A_T
-- [ ] T032 [US3] Write Kontrol proof `prove_theta_times_xsquared_no_overflow` in `test/fee-concentration-index/kontrol/IndexUpdate.k.sol` — mulDiv chain for theta_k * x_k^2 does not overflow
-- [ ] T033 [US3] Write Kontrol proof `prove_zero_lifetime_skipped` in `test/fee-concentration-index/kontrol/IndexUpdate.k.sol` — lifetime == 0 does not update index
-
-### Implementation for US3
-
-- [ ] T034 [US3] Implement FeeConcentrationIndexMod.computeTheta in `src/fee-concentration-index/FeeConcentrationIndexMod.sol` — Q128 division: (1 << 128) / lifetime
-- [ ] T035 [US3] Implement FeeConcentrationIndexMod.updateIndex in `src/fee-concentration-index/FeeConcentrationIndexMod.sol` — compute term = mulDiv(theta_k, x_k^2, 2^128), add to accumulatedSum
-- [ ] T036 [US3] Implement FeeConcentrationIndexMod.readIndex in `src/fee-concentration-index/FeeConcentrationIndexMod.sol` — sqrt(accumulatedSum << 128) for A_T, cap at 2^128, B_T = complement
-- [ ] T037 [US3] Implement afterRemoveLiquidity logic: read lifetime, skip if 0, compute x_k, compute theta_k, update index, deregister position, cleanup swap count
-- [ ] T038 [US3] Implement getIndex view function returning (A_T, B_T) as Q128 values per FR-007/FR-012
+- [ ] T041 [US3] Implement afterRemoveLiquidity index update: compute theta = 1/blockLifetime, x_k^2, call fciState.addTerm(), fciState.decrementPos() (FR-004, FR-006, FR-010, FR-013)
+- [ ] T042 [US3] Implement getIndex view function returning (A_T, thetaSum, posCount) per FR-007/FR-012
 
 ### Fuzz Tests for US3
 
-- [ ] T039 [P] [US3] Write fuzz test `testFuzz_jit_position_max_concentration` in `test/fee-concentration-index/fuzz/IndexUpdate.t.sol` — JIT (lifetime=1, x_k=1) produces A_T == 1
-- [ ] T040 [P] [US3] Write fuzz test `testFuzz_index_monotonic` in `test/fee-concentration-index/fuzz/IndexUpdate.t.sol` — A_T never decreases after any removal
-- [ ] T041 [P] [US3] Write fuzz test `testFuzz_index_formula_matches_spec` in `test/fee-concentration-index/fuzz/IndexUpdate.t.sol` — for N equal positions, verify SC-002 formula
+- [ ] T043 [P] [US3] Write fuzz test `testFuzz_jit_position_max_concentration` in `test/fee-concentration-index/fuzz/IndexUpdate.t.sol` — JIT (lifetime=1, x_k=1) produces A_T == 1 (SC-001)
+- [ ] T044 [P] [US3] Write fuzz test `testFuzz_index_monotonic` — A_T never decreases (INV-008)
+- [ ] T045 [P] [US3] Write fuzz test `testFuzz_index_formula_matches_spec` — N equal positions match SC-002 formula
 
-**Checkpoint**: Full index computation works. JIT position produces A_T = 1. Formula matches spec.
+**Checkpoint**: Full index computation works. JIT → A_T = 1. Formula matches spec.
 
 ---
 
-## Phase 6: User Story 4 — EVM Number Representation (Priority: P2)
+## Phase 9: Implementation — US5 Co-Primary State (Priority: P1)
 
-**Goal**: Verify all fixed-point arithmetic is overflow-free and precision is adequate. Boundary value testing.
+**Goal**: Verify atNull, deltaPlus, price computation from stored triple end-to-end.
 
-**Independent Test**: Compute x_k^2 for boundary values (0, 2^128), verify no overflow and precision within bounds.
+**Depends on**: US3 (index update writes thetaSum and posCount).
 
-**Depends on**: US2 (FeeShareRatio) and US3 (AccumulatedHHI) types must exist.
+- [ ] T046 [US5] Write unit test `test_atNull_zero_when_no_positions` in `test/fee-concentration-index/unit/FeeConcentrationState.t.sol` — posCount=0 → atNull=0 (edge case)
+- [ ] T047 [US5] Write unit test `test_deltaPlus_equals_AT_when_no_active_positions` — N=0, Theta=0, A_T>0 → Delta+=A_T (edge case)
+- [ ] T048 [US5] Write unit test `test_deltaPlus_zero_symmetric_pool` — A_T=0.5, Theta=Q128, N=2 → atNull=0.5, Delta+=0 (acceptance scenario 4)
+- [ ] T049 [US5] Write fuzz test `testFuzz_fci_nullLowerBound` — FCI-004: A_T >= atNull when posCount > 0
+
+**Checkpoint**: Co-primary derived quantities correct. All acceptance scenarios from US5 verified.
+
+---
+
+## Phase 10: Implementation — US6 Diamond Pattern Compatibility (Priority: P1)
+
+**Goal**: Remove BaseHook inheritance, make poolManager immutable, remove getHookPermissions.
+
+**Depends on**: US3 (hook logic exists to refactor).
+
+- [ ] T050 [US6] Rewrite `src/fee-concentration-index/FeeConcentrationIndex.sol`: remove `is BaseHook`, make poolManager `immutable` set in constructor, remove `getHookPermissions()`, rename `_afterAddLiquidity` → `afterAddLiquidity` (external), same for all hook functions (FR-014)
+- [ ] T051 [US6] Update `test/fee-concentration-index/harness/FeeConcentrationIndexHarness.sol` — remove BaseHook adapter, update for external hook functions
+- [ ] T052 [US6] Write unit test `test_facet_callable_via_delegatecall` in `test/fee-concentration-index/unit/DiamondCompatibility.t.sol` — call afterAddLiquidity via delegatecall from test diamond, verify state updates (acceptance scenario 1)
+- [ ] T053 [US6] Write unit test `test_poolManager_immutable_survives_delegatecall` — read poolManager via delegatecall, verify correct address (acceptance scenario 2)
+- [ ] T054 [US6] Write unit test `test_no_baseHook_no_getHookPermissions` — verify contract does not define getHookPermissions, does not use `is BaseHook` (acceptance scenario 3)
+
+**Checkpoint**: FCI is a standalone diamond facet. All US6 acceptance scenarios pass.
+
+---
+
+## Phase 11: Implementation — US4 EVM Number Representation (Priority: P2)
+
+**Goal**: Verify all fixed-point arithmetic is overflow-free and precision adequate.
+
+**Depends on**: US2 (FeeShareRatio) and US3 (index) types exist.
 
 ### Kontrol Proofs for US4
 
-- [ ] T042 [US4] Write Kontrol proof `prove_q128_boundary_squaring` in `test/fee-concentration-index/kontrol/FeeShareRatio.k.sol` — x_k = 2^128 (representing 1.0) squares without overflow
-- [ ] T043 [US4] Write Kontrol proof `prove_q128_division_precision` in `test/fee-concentration-index/kontrol/FeeShareRatio.k.sol` — feeGrowthInside / feeGrowthGlobal preserves >= 64 bits precision
-- [ ] T044 [US4] Write Kontrol proof `prove_sqrt_q128_precision` in `test/fee-concentration-index/kontrol/AccumulatedHHI.k.sol` — sqrt(Q256) produces correct Q128 result
+- [ ] T055 [US4] Write Kontrol proof `prove_q128_boundary_squaring` in `test/fee-concentration-index/kontrol/FeeShareRatio.k.sol` — x_k = 2^128 squares without overflow
+- [ ] T056 [US4] Write Kontrol proof `prove_q128_division_precision` — feeGrowthInside / feeGrowthGlobal preserves >= 64 bits precision
+- [ ] T057 [US4] Write Kontrol proof `prove_sqrt_q128_precision` — sqrt(Q256) produces correct Q128 result
 
 ### Fuzz Tests for US4
 
-- [ ] T045 [P] [US4] Write fuzz test `testFuzz_q128_squaring_boundary` in `test/fee-concentration-index/fuzz/FeeShareRatio.t.sol` — boundary values (0, 1, 2^64, 2^128-1, 2^128)
-- [ ] T046 [P] [US4] Write fuzz test `testFuzz_accumulated_sum_no_overflow` in `test/fee-concentration-index/fuzz/IndexUpdate.t.sol` — accumulated sum over many terms stays in Q128
+- [ ] T058 [P] [US4] Write fuzz test `testFuzz_q128_squaring_boundary` in `test/fee-concentration-index/fuzz/FeeShareRatio.t.sol`
+- [ ] T059 [P] [US4] Write fuzz test `testFuzz_accumulated_sum_no_overflow` in `test/fee-concentration-index/fuzz/IndexUpdate.t.sol`
 
-**Checkpoint**: All Q128 arithmetic verified overflow-free. SC-006 satisfied.
+**Checkpoint**: All Q128 arithmetic overflow-free. SC-006 satisfied.
 
 ---
 
-## Phase 7: Polish & Cross-Cutting Concerns
+## Phase 12: Polish & Cross-Cutting Concerns (TDD Phase 7)
 
-**Purpose**: Integration, gas optimization, static analysis per TDD Phase 5 and 7.
+**Purpose**: Final verification, gas optimization, static analysis re-run.
 
-- [ ] T047 Run Slither static analysis on `src/fee-concentration-index/` — zero findings required per TDD Phase 5
-- [ ] T048 Run Semgrep smart contract rules on `src/fee-concentration-index/` — zero findings required per TDD Phase 5
-- [ ] T049 Gas benchmark: afterSwap with 10 positions < 50k gas per SC-004
-- [ ] T050 Gas benchmark: afterRemoveLiquidity < 100k gas per SC-005
-- [ ] T051 Verify all invariants from `specs/001-fee-concentration-index/invariants.md` are covered by at least one Kontrol proof or fuzz test
-- [ ] T052 Final `forge test` — all fuzz tests pass
-- [ ] T053 Final `kontrol prove` — all formal proofs pass
+- [ ] T060 Run Slither on full `src/fee-concentration-index/` — zero findings
+- [ ] T061 Run Semgrep on full `src/fee-concentration-index/` — zero findings
+- [ ] T062 Gas benchmark: afterSwap with 10 positions < 50k gas (SC-004)
+- [ ] T063 Gas benchmark: afterRemoveLiquidity < 100k gas (SC-005)
+- [ ] T064 Verify all 21 invariants covered by at least one Kontrol proof or fuzz test
+- [ ] T065 Final `forge test --out out2` — all tests pass
+- [ ] T066 Final `kontrol prove` — all formal proofs pass
 
-**Checkpoint**: All tests pass, static analysis clean, gas budgets met, invariant coverage complete.
+**Checkpoint**: All tests pass, static analysis clean, gas budgets met, 21 invariants fully covered.
 
 ---
 
@@ -176,62 +235,41 @@
 
 ### Phase Dependencies
 
-- **Phase 1 (Setup)**: No dependencies — start immediately
-- **Phase 2 (Types)**: Depends on Phase 1 — BLOCKS all user stories
-- **Phase 3 (US1)**: Depends on Phase 2 — SwapCount and TickRangeRegistry types
-- **Phase 4 (US2)**: Depends on Phase 2 — FeeShareRatio type
-- **Phase 5 (US3)**: Depends on Phase 3 (US1) AND Phase 4 (US2) — needs lifetime + fee share
-- **Phase 6 (US4)**: Depends on Phase 4 (US2) and Phase 5 (US3) — boundary testing of existing types
-- **Phase 7 (Polish)**: Depends on all user stories complete
+- **Phase 1 (Setup)**: No dependencies
+- **Phase 2 (Types)**: Depends on Phase 1 — BLOCKS everything
+- **Phase 3–4 (Proofs)**: Depends on Phase 2 — proofs scaffold types
+- **Phase 5 (Static Analysis)**: Depends on Phase 2 — gate before implementation
+- **Phase 6 (US1)**: Depends on Phase 5
+- **Phase 7 (US2)**: Depends on Phase 5 — can parallel with US1
+- **Phase 8 (US3)**: Depends on US1 AND US2
+- **Phase 9 (US5)**: Depends on US3 (needs index update for end-to-end)
+- **Phase 10 (US6)**: Depends on US3 (hook logic exists to refactor)
+- **Phase 11 (US4)**: Depends on US2 and US3
+- **Phase 12 (Polish)**: Depends on all user stories
 
-### User Story Dependencies
+### Execution Graph
 
 ```
-Phase 1 (Setup) → Phase 2 (Types)
-                      ├── Phase 3 (US1: Lifetimes) ──┐
-                      └── Phase 4 (US2: Fee Share) ───┼── Phase 5 (US3: Index) → Phase 6 (US4: Arithmetic) → Phase 7 (Polish)
+Phase 1 → Phase 2 → Phase 3–4 → Phase 5
+                                    ├── Phase 6 (US1) ──┐
+                                    └── Phase 7 (US2) ──┼── Phase 8 (US3) ──┬── Phase 9 (US5)
+                                                        │                   ├── Phase 10 (US6)
+                                                        └───────────────────┴── Phase 11 (US4) → Phase 12
 ```
 
-- **US1 and US2 can run in parallel** after Phase 2
-- **US3 depends on both US1 and US2**
-- **US4 depends on US3**
-
-### Within Each User Story (TDD Order)
+### Within Each Phase (TDD Order)
 
 1. Kontrol proofs written ONE AT A TIME (build → prove → review → next)
-2. Implementation after proofs scaffold exists
+2. Implementation after proof scaffold exists
 3. Fuzz tests after implementation
 4. User review gate after each file
 
 ### Parallel Opportunities
 
-- T003-T008: All type definitions can be written in parallel (different files)
-- T010-T014: Kontrol proofs for US1 written sequentially (TDD rule)
-- T019-T021: US1 fuzz tests can run in parallel
-- Phase 3 (US1) and Phase 4 (US2) can run in parallel
-- T039-T041: US3 fuzz tests can run in parallel
-- T045-T046: US4 fuzz tests can run in parallel
-
----
-
-## Implementation Strategy
-
-### MVP First (User Story 1 + 2 Only)
-
-1. Complete Phase 1: Setup + invariants
-2. Complete Phase 2: All type definitions (foundational)
-3. Complete Phase 3: US1 — position lifetime tracking (P1)
-4. Complete Phase 4: US2 — fee share ratio computation (P1)
-5. **STOP and VALIDATE**: Both P1 stories independently testable
-
-### Incremental Delivery
-
-1. Setup + Types → Foundation ready
-2. Add US1 (lifetimes) → Test: N swaps → lifetime == N
-3. Add US2 (fee share) → Test: sole LP → x_k == 1
-4. Add US3 (index) → Test: JIT → A_T == 1
-5. Add US4 (arithmetic) → Test: boundary values, no overflow
-6. Polish → Gas, static analysis, coverage
+- T003–T005: Existing type verification in parallel
+- Phase 6 (US1) and Phase 7 (US2) can run in parallel
+- Fuzz tests within a phase marked [P] can run in parallel
+- T058–T059: US4 fuzz tests in parallel
 
 ---
 
@@ -243,3 +281,6 @@ Phase 1 (Setup) → Phase 2 (Types)
 - Each file gets user review before moving to next file
 - SCOP: No `is`, no `library`, no `modifier` in production code
 - Commit after each task or logical group
+- FeeConcentrationState replaces AccumulatedHHI throughout
+- getIndex returns (A_T, thetaSum, posCount) not (A_T, B_T)
+- BaseHook removal in Phase 10 — all prior phases can use existing harness

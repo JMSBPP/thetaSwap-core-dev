@@ -73,11 +73,11 @@
 7. Implement getIndex — read own AccumulatedHHI
 
 **Success criteria**:
-- [ ] All 4 callbacks compile and are `external`
-- [ ] Auth reverts on unauthorized sender
-- [ ] Burn with accumulated Collect fees computes correct fee share
-- [ ] getIndex returns (indexA, indexB) from own storage
-- [ ] No `library`, `modifier`, or `is` (except if needed for interface)
+- [x] All 4 callbacks compile and are `external`
+- [x] Auth reverts on unauthorized sender
+- [x] Burn with accumulated Collect fees computes correct fee share
+- [x] getIndex returns (indexA, indexB) from own storage
+- [x] No `library`, `modifier`, or `is` (except if needed for interface)
 
 ---
 

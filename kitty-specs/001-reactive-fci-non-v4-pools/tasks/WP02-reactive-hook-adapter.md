@@ -1,7 +1,7 @@
 ---
 work_package_id: WP02
 title: ReactiveHookAdapter Contract
-lane: "doing"
+lane: "for_review"
 dependencies: [WP01]
 base_branch: 001-reactive-fci-non-v4-pools-WP01
 base_commit: 5b0106509ef91db22732991d27a1d02330eacf11
@@ -63,8 +63,8 @@ The ReactiveHookAdapter sits at `src/reactive-integration/adapters/uniswapV3/` a
 - All `external` functions (no `public`)
 
 **Validation**:
-- [ ] Contract compiles
-- [ ] No inheritance, no modifiers
+- [x]Contract compiles
+- [x]No inheritance, no modifiers
 
 ### T005: Implement setAuthorized
 
@@ -77,9 +77,9 @@ The ReactiveHookAdapter sits at `src/reactive-integration/adapters/uniswapV3/` a
 4. Emit an event: `event AuthorizedCallerUpdated(address indexed caller, bool authorized);`
 
 **Validation**:
-- [ ] Only owner can call
-- [ ] Non-owner reverts with NotOwner()
-- [ ] Event emitted on state change
+- [x]Only owner can call
+- [x]Non-owner reverts with NotOwner()
+- [x]Event emitted on state change
 
 ### T006: Implement onV3Swap(V3SwapData)
 
@@ -99,9 +99,9 @@ The ReactiveHookAdapter sits at `src/reactive-integration/adapters/uniswapV3/` a
 - Write an adapter-specific version that calls `reactiveFciStorage()` instead
 
 **Validation**:
-- [ ] Unauthorized sender reverts
-- [ ] Swap count increments for overlapping ranges
-- [ ] Non-overlapping ranges untouched
+- [x]Unauthorized sender reverts
+- [x]Swap count increments for overlapping ranges
+- [x]Non-overlapping ranges untouched
 
 ### T007: Implement onV3Mint(V3MintData)
 
@@ -119,9 +119,9 @@ The ReactiveHookAdapter sits at `src/reactive-integration/adapters/uniswapV3/` a
 **Key difference from V4 FCI**: V4 reads feeGrowthInside from PoolManager via extsload. The reactive path has no access to V3 pool state — fees come from Collect events instead. Baseline is 0.
 
 **Validation**:
-- [ ] Position registered in registry with correct tick range and liquidity
-- [ ] feeGrowthBaseline set to 0
-- [ ] Duplicate Mint for same position updates rather than creating duplicate
+- [x]Position registered in registry with correct tick range and liquidity
+- [x]feeGrowthBaseline set to 0
+- [x]Duplicate Mint for same position updates rather than creating duplicate
 
 ### T008: Implement onV3Collect(V3CollectData)
 
@@ -139,8 +139,8 @@ The ReactiveHookAdapter sits at `src/reactive-integration/adapters/uniswapV3/` a
 - Multiple Collects before Burn: all amounts summed correctly via `+=`
 
 **Validation**:
-- [ ] Fees accumulate (not overwrite) across multiple Collect calls
-- [ ] Works for unregistered positions without revert
+- [x]Fees accumulate (not overwrite) across multiple Collect calls
+- [x]Works for unregistered positions without revert
 
 ### T009: Implement onV3Burn(V3BurnData)
 
@@ -182,11 +182,11 @@ The ReactiveHookAdapter sits at `src/reactive-integration/adapters/uniswapV3/` a
 - Unregistered position: deregister returns early, no state change
 
 **Validation**:
-- [ ] Registered position with swaps → HHI accumulated
-- [ ] Registered position without swaps → HHI unchanged (INV-010)
-- [ ] Unregistered position → no-op, no revert (RX-009)
-- [ ] CollectedFees cleaned up after Burn
-- [ ] feeGrowthBaseline cleaned up after Burn
+- [x]Registered position with swaps → HHI accumulated
+- [x]Registered position without swaps → HHI unchanged (INV-010)
+- [x]Unregistered position → no-op, no revert (RX-009)
+- [x]CollectedFees cleaned up after Burn
+- [x]feeGrowthBaseline cleaned up after Burn
 
 ### T010: Implement getIndex(PoolKey)
 
@@ -199,18 +199,18 @@ The ReactiveHookAdapter sits at `src/reactive-integration/adapters/uniswapV3/` a
 4. Return `(hhi.toIndexA(), hhi.toIndexB())`
 
 **Validation**:
-- [ ] Returns (0, 0) for pools with no data
-- [ ] Returns correct index after Burn processing
-- [ ] View function — no state changes
+- [x]Returns (0, 0) for pools with no data
+- [x]Returns correct index after Burn processing
+- [x]View function — no state changes
 
 ## Definition of Done
 
-- [ ] All 4 callbacks + getIndex + setAuthorized compile
-- [ ] All functions are `external` (SCOP: no `public`)
-- [ ] No `library`, `modifier`, or `is` keywords
-- [ ] Auth reverts on unauthorized sender for all callbacks
-- [ ] onV3Burn handles unregistered positions as no-op
-- [ ] `forge build` succeeds
+- [x]All 4 callbacks + getIndex + setAuthorized compile
+- [x]All functions are `external` (SCOP: no `public`)
+- [x]No `library`, `modifier`, or `is` keywords
+- [x]Auth reverts on unauthorized sender for all callbacks
+- [x]onV3Burn handles unregistered positions as no-op
+- [x]`forge build` succeeds
 
 ## Risks
 
@@ -221,3 +221,4 @@ The ReactiveHookAdapter sits at `src/reactive-integration/adapters/uniswapV3/` a
 ## Activity Log
 
 - 2026-03-06T17:16:10Z – claude-opus – shell_pid=187991 – lane=doing – Assigned agent via workflow command
+- 2026-03-06T17:39:45Z – claude-opus – shell_pid=187991 – lane=for_review – Ready for review: adapter is pure V3→V4 calldata translation free functions, no FCI logic duplicated

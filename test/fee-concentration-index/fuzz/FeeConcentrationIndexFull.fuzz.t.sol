@@ -21,7 +21,7 @@ contract FeeConcentrationIndexFullFuzzTest is PosmTestSetup, FCITestHelper {
     FeeConcentrationIndexHarness harness;
     PoolId poolId;
 
-    // ── Shared bounds (must match scripts/ffi/hhi_oracle.py) ──
+    // ── Shared bounds (must match research/scripts/hhi_oracle.py) ──
     uint256 constant MIN_LPS = 2;
     uint256 constant MAX_LPS = 50;
     uint256 constant MIN_LIQUIDITY = 1e15;
@@ -84,7 +84,7 @@ contract FeeConcentrationIndexFullFuzzTest is PosmTestSetup, FCITestHelper {
         bytes memory input = abi.encode(liquidities, blockLifetimes);
         string[] memory cmd = new string[](3);
         cmd[0] = "python3";
-        cmd[1] = "scripts/ffi/hhi_oracle.py";
+        cmd[1] = "research/scripts/hhi_oracle.py";
         cmd[2] = vm.toString(input);
         bytes memory result = vm.ffi(cmd);
         (expectedHHI, expectedIndexA) = abi.decode(result, (uint256, uint256));

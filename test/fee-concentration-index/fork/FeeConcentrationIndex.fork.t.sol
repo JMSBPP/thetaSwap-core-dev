@@ -86,7 +86,7 @@ contract FeeConcentrationIndexForkTest is Test {
 
     function test_fork_wethUsdc_replayEvents_indexMatchesOracle() public {
         // Load fixture
-        string memory json = vm.readFile("data/fixtures/fci_weth_usdc_v4.json");
+        string memory json = vm.readFile("research/data/fixtures/fci_weth_usdc_v4.json");
 
         // Parse events
         uint256 eventCount = abi.decode(vm.parseJson(json, ".eventCount"), (uint256));

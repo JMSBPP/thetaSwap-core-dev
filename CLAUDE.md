@@ -3,6 +3,8 @@
 Last updated: 2026-03-07
 
 ## Active Technologies
+- Solidity ^0.8.26 + Uniswap V4 core (PoolManager, Hooks, StateLibrary), forge-std, kontrol-cheatcodes, Solady (FixedPointMathLib), MasterHook diamond (hook-bazaar/monorepo), Compose extensions (002-theta-swap-cfmm)
+- Diamond storage pattern (keccak256 slot hashing, disjoint slots per facet) (002-theta-swap-cfmm)
 
 - Solidity ^0.8.26 + Uniswap V4 core (PoolManager, Hooks, StateLibrary, TickBitmap), forge-std
 - Python 3.11+ (research: backtest, econometrics, oracle)
@@ -67,6 +69,10 @@ git diff origin/001-fee-concentration-index origin/002-theta-swap-cfmm -- resear
 
 - Solidity ^0.8.26: Follow standard conventions, no `is` inheritance in production contracts
 - Python: Frozen dataclasses, free pure functions, full typing (per @functional-python skill)
+
+## Recent Changes
+- 002-theta-swap-cfmm: Added Solidity ^0.8.26 + Uniswap V4 core (PoolManager, Hooks, StateLibrary), forge-std, kontrol-cheatcodes, Solady (FixedPointMathLib), MasterHook diamond (hook-bazaar/monorepo), Compose extensions
+- 001-fee-concentration-index: Added Solidity ^0.8.26 + Uniswap V4 core (PoolManager, Hooks, StateLibrary, TickBitmap), forge-std, kontrol-cheatcodes
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

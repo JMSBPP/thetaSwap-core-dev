@@ -227,12 +227,27 @@ contract FeeConcentrationIndex {
 
     // ── View ──
 
-    function getIndex(PoolKey calldata key, bool reactive) external view returns (uint128 indexA, uint256 thetaSum, uint256 posCount) {
+    function getIndex(PoolKey calldata key, bool reactive) external view returns (uint128 indexA, uint256 thetaSum, uint256 removedPosCount) {
         FeeConcentrationIndexStorage storage $ = reactive ? reactiveFciStorage() : fciStorage();
         PoolId poolId = PoolIdLibrary.toId(key);
         indexA = $.fciState[poolId].toIndexA();
         thetaSum = $.fciState[poolId].thetaSum;
-        posCount = $.fciState[poolId].posCount;
+        removedPosCount = $.fciState[poolId].removedPosCount;
+    }
+
+    function getDeltaPlus(PoolKey calldata key, bool reactive) external view returns (uint128 deltaPlus_) {
+        FeeConcentrationIndexStorage storage $ = reactive ? reactiveFciStorage() : fciStorage();
+        deltaPlus_ = $.fciState[PoolIdLibrary.toId(key)].deltaPlus();
+    }
+
+    function getAtNull(PoolKey calldata key, bool reactive) external view returns (uint128 atNull_) {
+        FeeConcentrationIndexStorage storage $ = reactive ? reactiveFciStorage() : fciStorage();
+        atNull_ = $.fciState[PoolIdLibrary.toId(key)].atNull();
+    }
+
+    function getThetaSum(PoolKey calldata key, bool reactive) external view returns (uint256 thetaSum_) {
+        FeeConcentrationIndexStorage storage $ = reactive ? reactiveFciStorage() : fciStorage();
+        thetaSum_ = $.fciState[PoolIdLibrary.toId(key)].thetaSum;
     }
 
     // ── IERC165 ──

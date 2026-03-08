@@ -94,4 +94,19 @@ contract FeeConcentrationIndexHarness is FeeConcentrationIndex {
         FeeConcentrationIndexStorage storage $ = fciStorage();
         return $.registries[poolId].positionAddBlock[positionKey];
     }
+
+    function getRemovedPosCount(PoolId poolId) external view returns (uint256) {
+        FeeConcentrationIndexStorage storage $ = fciStorage();
+        return $.fciState[poolId].removedPosCount;
+    }
+
+    function getAtNull(PoolId poolId) external view returns (uint128) {
+        FeeConcentrationIndexStorage storage $ = fciStorage();
+        return $.fciState[poolId].atNull();
+    }
+
+    function getDeltaPlus(PoolId poolId) external view returns (uint128) {
+        FeeConcentrationIndexStorage storage $ = fciStorage();
+        return $.fciState[poolId].deltaPlus();
+    }
 }

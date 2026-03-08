@@ -8,14 +8,17 @@ import {BlockCount} from "./BlockCountMod.sol";
 // Replaces bare AccumulatedHHI UDVT with a triple that enables
 // computing the competitive null (atNull) and deviation (Delta+).
 //
-// accumulatedSum = Σ(θ_k · x_k²), Q128 — cumulative over removals
-// thetaSum       = Σ(1/ℓ_k), Q128 — cumulative over removals
-// posCount       = N = active positions (inc on add, dec on remove)
+// accumulatedSum   = Σ(θ_k · x_k²), Q128 — cumulative over removals
+// thetaSum         = Σ(1/ℓ_k), Q128 — cumulative over removals
+// posCount         = active positions (inc on add, dec on remove)
+// removedPosCount  = N in eq.(5): positions that contributed to the sum
+//                    (inc in addTerm, never decremented). Used by atNull.
 
 struct FeeConcentrationState {
     uint256 accumulatedSum;
     uint256 thetaSum;
     uint256 posCount;
+    uint256 removedPosCount;
 }
 
 uint256 constant Q128 = 1 << 128;
@@ -35,6 +38,8 @@ function addTerm(
     self.accumulatedSum = self.accumulatedSum + (xSquaredQ128 / lifetime);
     // θ_k = Q128 / lifetime (Q128 representation of 1/ℓ_k)
     self.thetaSum = self.thetaSum + (Q128 / lifetime);
+    // N for the competitive null: counts positions that contributed terms
+    self.removedPosCount = self.removedPosCount + 1;
 }
 
 // Increment active position count (called on afterAddLiquidity).
@@ -61,9 +66,11 @@ function toIndexA(FeeConcentrationState storage self) view returns (uint128) {
 }
 
 // Competitive null: atNull = sqrt(thetaSum / N²) in Q128.
+// N = removedPosCount: the number of positions whose terms are in the sum.
+// This is Sybil-resistant (inflating N with dust increases Δ⁺, see notes.md).
 // When N=0 or thetaSum=0, returns 0.
 function atNull(FeeConcentrationState storage self) view returns (uint128) {
-    uint256 n = self.posCount;
+    uint256 n = self.removedPosCount;
     uint256 theta = self.thetaSum;
     if (n == 0) return 0;
     if (theta == 0) return 0;

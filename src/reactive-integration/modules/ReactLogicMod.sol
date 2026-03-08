@@ -77,11 +77,15 @@ function processLog(
 
 function _handleSelfSync(IReactive.LogRecord calldata log) {
     uint256 sig = topic0(log);
+    // PoolRegistered/PoolUnregistered have both params indexed →
+    // chainId is in topic_1, pool address is in topic_2 (not in data).
     if (sig == POOL_REGISTERED_SIG) {
-        (uint256 chainId_, address pool) = abi.decode(log.data, (uint256, address));
+        uint256 chainId_ = log.topic_1;
+        address pool = address(uint160(log.topic_2));
         setWhitelisted(chainId_, pool, true);
     } else if (sig == POOL_UNREGISTERED_SIG) {
-        (uint256 chainId_, address pool) = abi.decode(log.data, (uint256, address));
+        uint256 chainId_ = log.topic_1;
+        address pool = address(uint160(log.topic_2));
         setWhitelisted(chainId_, pool, false);
     }
 }

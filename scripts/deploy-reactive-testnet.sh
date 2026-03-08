@@ -1,9 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Prerequisites
+command -v jq >/dev/null || { echo "ERROR: jq is required"; exit 1; }
+command -v forge >/dev/null || { echo "ERROR: forge is required"; exit 1; }
+command -v cast >/dev/null || { echo "ERROR: cast is required"; exit 1; }
+
 # Load env
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "${SCRIPT_DIR}/.env"
+
+# Validate required variables
+for var in REACTIVE_RPC_URL SEPOLIA_RPC_URL DEPLOYER_PRIVATE_KEY SEPOLIA_CALLBACK_PROXY V3_POOL V3_ORIGIN_CHAIN_ID; do
+    [[ -z "${!var:-}" ]] && echo "ERROR: $var is not set in .env" && exit 1
+done
+[[ "$DEPLOYER_PRIVATE_KEY" == "0x..." ]] && echo "ERROR: DEPLOYER_PRIVATE_KEY is still the placeholder" && exit 1
 
 echo "=== Step 1: Deploy ReactiveHookAdapter on Sepolia ==="
 ADAPTER=$(forge create \

@@ -53,4 +53,27 @@ contract V3FeeGrowthReaderForkTest is Test {
             console2.log("Fee growth delta:", delta);
         }
     }
+
+    /// @dev Verify that v3PositionFeeGrowthLast0 reads position storage correctly.
+    /// For a fully-collected position, feeGrowthInsideLast0 equals 0 (V3 clears on collect).
+    /// For a position with uncollected fees, it equals the feeGrowthInside at last update.
+    function test_fork_positionFeeGrowthLastMatchesTicks() public view {
+        int24 tickLower = -60;
+        int24 tickUpper = 60;
+        address posOwner = 0xe69228626E4800578D06a93BaaA595f6634A47C3;
+
+        uint256 fromTicks = v3FeeGrowthInside0(pool, tickLower, tickUpper);
+        uint256 fromPosition = v3PositionFeeGrowthLast0(pool, posOwner, tickLower, tickUpper);
+
+        console2.log("feeGrowthInside0 (from ticks):", fromTicks);
+        console2.log("feeGrowthInsideLast0 (from position):", fromPosition);
+
+        // Verify the library reads match direct pool.positions() call.
+        bytes32 posKey = keccak256(abi.encodePacked(posOwner, tickLower, tickUpper));
+        (, uint256 directFeeGrowthLast0,,,) = pool.positions(posKey);
+        assertEq(fromPosition, directFeeGrowthLast0, "library must match direct read");
+
+        // feeGrowthInsideLast0 <= current feeGrowthInside0 (monotonically non-decreasing)
+        assertTrue(fromTicks >= fromPosition, "current feeGrowthInside >= position snapshot");
+    }
 }

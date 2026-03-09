@@ -11,6 +11,7 @@ import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Po
 //         uint160 sqrtPriceX96, uint128 liquidity, int24 tick)
 struct V3SwapData {
     IUniswapV3Pool pool;
+    int24 tickBefore;
     int24 tick;
 }
 

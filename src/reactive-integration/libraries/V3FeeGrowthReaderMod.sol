@@ -37,7 +37,8 @@ function v3FeeGrowthInside0(
 }
 
 // Read a position's stored feeGrowthInside0LastX128 from V3 pool.
-// After a burn, this value is updated to current — call BEFORE burn for snapshots.
+// V3 updates this during burn() BEFORE de-initializing ticks,
+// so it equals current feeGrowthInside even after full position removal.
 function v3PositionFeeGrowthLast0(
     IUniswapV3Pool pool,
     address owner,

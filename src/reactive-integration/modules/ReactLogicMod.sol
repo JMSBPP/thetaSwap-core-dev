@@ -12,7 +12,7 @@ import {
 import {V3SwapData, V3MintData, V3BurnData} from "../types/ReactiveCallbackDataMod.sol";
 
 import {
-    isWhitelisted, setWhitelisted
+    isWhitelisted, setWhitelisted, getLastTick, setLastTick
 } from "./ReactVmStorageMod.sol";
 
 // Self-sync event signatures (emitted by RN instance, consumed by ReactVM)
@@ -43,9 +43,18 @@ function processLog(
 
     if (sig == V3_SWAP_SIG) {
         V3SwapData memory data = decodeV3Swap(log);
+
+        // Inject pre-swap tick from shadow state
+        (int24 prevTick, bool isSet) = getLastTick(logChainId(log), emitter(log));
+        data.tickBefore = prevTick;
+        setLastTick(logChainId(log), emitter(log), data.tick);
+
+        // Skip increment on first swap (no valid tickBefore yet)
+        if (!isSet) return;
+
         emit IReactive.Callback(
             logChainId(log), adapter, CALLBACK_GAS_LIMIT,
-            abi.encodeWithSignature("onV3Swap(address,(address,int24))", address(0), data)
+            abi.encodeWithSignature("onV3Swap(address,(address,int24,int24))", address(0), data)
         );
     } else if (sig == V3_MINT_SIG) {
         V3MintData memory data = decodeV3Mint(log);

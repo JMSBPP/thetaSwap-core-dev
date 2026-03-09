@@ -7,7 +7,7 @@ import {V3SwapData, V3MintData, V3BurnData} from "../../types/ReactiveCallbackDa
 import {requireAuthorized} from "./ReactiveAuthMod.sol";
 import {reactiveFciStorage} from "./ReactiveHookAdapterStorageMod.sol";
 import {v3AdapterStorage, V3AdapterStorage} from "./ReactiveHookAdapterStorageMod.sol";
-import {v3FeeGrowthInside0} from "../../libraries/V3FeeGrowthReaderMod.sol";
+import {v3FeeGrowthInside0, v3PositionFeeGrowthLast0} from "../../libraries/V3FeeGrowthReaderMod.sol";
 import {
     FeeConcentrationIndexStorage,
     registerPosition, setFeeGrowthBaseline, deleteFeeGrowthBaseline,
@@ -63,7 +63,9 @@ contract ReactiveHookAdapter {
         FeeConcentrationIndexStorage storage $ = reactiveFciStorage();
         PoolKey memory key = fromV3Pool(data.pool, address(this));
         PoolId poolId = PoolIdLibrary.toId(key);
-        incrementOverlappingRanges($, poolId, data.tick, data.tick);
+        int24 tickMin = data.tickBefore < data.tick ? data.tickBefore : data.tick;
+        int24 tickMax = data.tickBefore > data.tick ? data.tickBefore : data.tick;
+        incrementOverlappingRanges($, poolId, tickMin, tickMax);
     }
 
     function onV3Mint(address rvmSender, V3MintData calldata data) external {
@@ -99,8 +101,12 @@ contract ReactiveHookAdapter {
             $.registries[poolId].deregister(posKey, data.liquidity);
 
         if (!swapLifetime.isZero()) {
-            // Read current feeGrowthInside0 live from V3 pool (same chain).
-            uint256 rangeFeeGrowthNow0 = v3FeeGrowthInside0(data.pool, data.tickLower, data.tickUpper);
+            // Read position's feeGrowthInsideLast0 from V3 pool.
+            // V3's burn() updates this to current feeGrowthInside BEFORE
+            // de-initializing ticks, so it's valid even after the last LP exits.
+            uint256 rangeFeeGrowthNow0 = v3PositionFeeGrowthLast0(
+                data.pool, data.owner, data.tickLower, data.tickUpper
+            );
             // Position's snapshot at mint time (stored by onV3Mint).
             V3AdapterStorage storage v3$ = v3AdapterStorage();
             uint256 positionFeeLast0 = v3$.feeGrowthSnapshot0[poolId][posKey];

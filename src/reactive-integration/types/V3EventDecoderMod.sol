@@ -19,7 +19,7 @@ function decodeV3Swap(IReactive.LogRecord calldata log) pure returns (V3SwapData
     // Swap: topic_1=sender(indexed), topic_2=recipient(indexed)
     // data: (int256 amount0, int256 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick)
     (,,,, int24 tick) = abi.decode(log.data, (int256, int256, uint160, uint128, int24));
-    return V3SwapData({pool: IUniswapV3Pool(log._contract), tick: tick});
+    return V3SwapData({pool: IUniswapV3Pool(log._contract), tickBefore: 0, tick: tick});
 }
 
 function decodeV3Mint(IReactive.LogRecord calldata log) pure returns (V3MintData memory) {

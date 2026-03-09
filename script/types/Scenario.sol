@@ -4,8 +4,10 @@ pragma solidity ^0.8.26;
 // Multi-chain, multi-protocol deterministic scenario dispatch for FCI scripts.
 // Free functions operate on Scenario storage — routing mint/burn/swap
 // to V3 (IUniswapV3Pool) or V4 (PositionManager) based on Protocol.
-// Tick ranges and swap params come from Constants.sol.
-// Capital amounts and block lifetimes are recipe-driven (deltaPlusFactory).
+//
+// BROADCAST MODE: all pool calls use vm.broadcast(pk) to sign real
+// transactions on the live chain. The reactive adapter hears these events.
+// Block advancement is external — multi-block recipes are split into phases.
 
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import {PoolKey} from "v4-core/src/types/PoolKey.sol";
@@ -29,73 +31,67 @@ struct Scenario {
     mapping(uint256 chainId => uint256[]) tokenIds;
 }
 
-// ── Known Δ⁺ thresholds (Q128, derived from unit tests) ──
-//
-// US3-B: sole provider                     → Δ⁺ = 0
-// US3-C: 2 LPs, 1:1 capital, same time    → Δ⁺ = 0
-// US3-D: 2 LPs, 1:2 capital, same time    → Δ⁺ ≈ 0.038
-// US3-F: 2 LPs, 1:9 capital, time 100:1   → Δ⁺ ≈ 0.398
-// Capponi threshold Δ*                      ≈ 0.09
+// ── Known delta-plus thresholds (Q128, derived from unit tests) ──
 
 uint128 constant DELTA_EQUILIBRIUM = 0;
 uint128 constant DELTA_MILD        = uint128(uint256(INDEX_ONE) * 383 / 10000);   // 0.0383
 uint128 constant DELTA_CAPPONI     = uint128(uint256(INDEX_ONE) * 900 / 10000);   // 0.09
 uint128 constant DELTA_CROWDOUT    = uint128(uint256(INDEX_ONE) * 3981 / 10000);  // 0.3981
 
-// ── Recipe: the varying parameters for each known scenario ──
+// ── Recipe ──
 
 struct Recipe {
     uint256 capitalA;
     uint256 capitalB;
-    uint256 blockAdvanceBeforeB;   // blocks between A mint and B mint
-    uint256 numSwapsBeforeBurn;    // swaps while both active
-    uint256 numSwapsAfterBurnB;    // swaps after B exits (only A active)
-    uint256 blockLifetimeB;        // blocks B stays after its swaps
-    uint256 blockLifetimeAAfterB;  // blocks A stays after B exits
-    bool    reverseSwap;           // include a reverse swap (round-trip)
+    uint256 numSwapsBeforeBurn;
+    uint256 numSwapsAfterBurnB;
+    bool    reverseSwap;
+    bool    multiBlock;           // true = needs block gap (phased execution)
 }
 
-// US3-C: equal capital, same block, 1 swap, both exit → Δ⁺ = 0
+// US3-C: equal capital, 1 swap, both exit same block -> delta-plus = 0
 function recipeEquilibrium() pure returns (Recipe memory) {
     return Recipe({
         capitalA: 1e18,
         capitalB: 1e18,
-        blockAdvanceBeforeB: 0,
         numSwapsBeforeBurn: 1,
         numSwapsAfterBurnB: 0,
-        blockLifetimeB: 0,
-        blockLifetimeAAfterB: 0,
-        reverseSwap: false
+        reverseSwap: false,
+        multiBlock: false
     });
 }
 
-// US3-D: 1:2 capital, same block, 1 swap → Δ⁺ ≈ 0.038
+// US3-D: 1:2 capital, 1 swap, same block -> delta-plus ~ 0.038
 function recipeMild() pure returns (Recipe memory) {
     return Recipe({
         capitalA: 1e18,
         capitalB: 2e18,
-        blockAdvanceBeforeB: 0,
         numSwapsBeforeBurn: 1,
         numSwapsAfterBurnB: 0,
-        blockLifetimeB: 0,
-        blockLifetimeAAfterB: 0,
-        reverseSwap: false
+        reverseSwap: false,
+        multiBlock: false
     });
 }
 
-// US3-F: 1:9 capital, B enters at block 50, round-trip swap,
-// B exits at block 51 (lifetime=1), A exits at block 101 (lifetime=100) → Δ⁺ ≈ 0.398
+// US3-F: 1:9 capital, round-trip swap, B exits early, A exits late
+// -> delta-plus ~ 0.398
+// Requires 3 phases across multiple blocks.
 function recipeCrowdout() pure returns (Recipe memory) {
     return Recipe({
         capitalA: 1e18,
         capitalB: 9e18,
-        blockAdvanceBeforeB: 49,
         numSwapsBeforeBurn: 1,
         numSwapsAfterBurnB: 1,
-        blockLifetimeB: 1,
-        blockLifetimeAAfterB: 49,
-        reverseSwap: true
+        reverseSwap: true,
+        multiBlock: true
     });
+}
+
+function selectRecipe(uint128 targetDeltaPlus) pure returns (Recipe memory) {
+    if (targetDeltaPlus == 0) return recipeEquilibrium();
+    uint128 midMildCrowdout = uint128((uint256(DELTA_MILD) + uint256(DELTA_CROWDOUT)) / 2);
+    if (targetDeltaPlus <= midMildCrowdout) return recipeMild();
+    return recipeCrowdout();
 }
 
 // ── Registration ──
@@ -140,16 +136,14 @@ function v4SwapRouter(Scenario storage s, uint256 chainId) view returns (PoolSwa
     return PoolSwapTest(s.swapRouter[chainId]);
 }
 
-// ── V4 encoding (pure, mirrors LiquidityOperations) ──
+// ── V4 encoding (pure) ──
 
 uint128 constant MAX_SLIPPAGE = type(uint128).max;
 uint128 constant MIN_SLIPPAGE = 0;
 
-function encodeMint(
-    PoolKey memory k,
-    uint256 liquidity,
-    address recipient
-) pure returns (bytes memory) {
+function encodeMint(PoolKey memory k, uint256 liquidity, address recipient)
+    pure returns (bytes memory)
+{
     Plan memory planner = Planner.init();
     planner.add(
         Actions.MINT_POSITION,
@@ -158,11 +152,9 @@ function encodeMint(
     return planner.finalizeModifyLiquidityWithClose(k);
 }
 
-function encodeDecrease(
-    PoolKey memory k,
-    uint256 tokenId,
-    uint256 liquidity
-) pure returns (bytes memory) {
+function encodeDecrease(PoolKey memory k, uint256 tokenId, uint256 liquidity)
+    pure returns (bytes memory)
+{
     Plan memory planner = Planner.init();
     planner.add(
         Actions.DECREASE_LIQUIDITY,
@@ -171,102 +163,97 @@ function encodeDecrease(
     return planner.finalizeModifyLiquidityWithClose(k);
 }
 
-function encodeBurn(
-    PoolKey memory k,
-    uint256 tokenId
-) pure returns (bytes memory) {
+function encodeBurn(PoolKey memory k, uint256 tokenId)
+    pure returns (bytes memory)
+{
     Plan memory planner = Planner.init();
-    planner.add(
-        Actions.BURN_POSITION,
-        abi.encode(tokenId, MIN_SLIPPAGE, MIN_SLIPPAGE, "")
-    );
+    planner.add(Actions.BURN_POSITION, abi.encode(tokenId, MIN_SLIPPAGE, MIN_SLIPPAGE, ""));
     return planner.finalizeModifyLiquidityWithClose(k);
 }
 
-// ── Mint (parameterized liquidity) ──
+// ── Mint (broadcast: signs real tx from pk) ──
 
 function mintPosition(
     Scenario storage s,
     uint256 chainId,
     Protocol protocol,
-    address caller,
+    uint256 pk,
     uint256 liquidity
 ) returns (uint256 tokenId) {
+    address caller = s.vm.addr(pk);
     if (isUniswapV3(protocol)) {
         IUniswapV3Pool pool = v3Pool(s, chainId);
-        s.vm.prank(caller);
+        s.vm.broadcast(pk);
         pool.mint(caller, TICK_LOWER, TICK_UPPER, uint128(liquidity), "");
     } else {
         IPositionManager lpm = v4Lpm(s, chainId);
         PoolKey memory k = s.pools[chainId];
         tokenId = lpm.nextTokenId();
         bytes memory calls = encodeMint(k, liquidity, caller);
-        s.vm.prank(caller);
+        s.vm.broadcast(pk);
         lpm.modifyLiquidities(calls, DEADLINE);
         s.tokenIds[chainId].push(tokenId);
     }
 }
 
-// ── Burn (parameterized liquidity) ──
+// ── Burn (broadcast) ──
 
 function burnPosition(
     Scenario storage s,
     uint256 chainId,
     Protocol protocol,
-    address caller,
+    uint256 pk,
     uint256 tokenId,
     uint256 liquidity
 ) {
+    address caller = s.vm.addr(pk);
     if (isUniswapV3(protocol)) {
         IUniswapV3Pool pool = v3Pool(s, chainId);
 
         // Zero-burn to trigger fee accounting
-        s.vm.prank(caller);
+        s.vm.broadcast(pk);
         pool.burn(TICK_LOWER, TICK_UPPER, 0);
-        s.vm.prank(caller);
+        s.vm.broadcast(pk);
         pool.collect(caller, TICK_LOWER, TICK_UPPER, type(uint128).max, type(uint128).max);
 
         // Full burn
-        s.vm.prank(caller);
+        s.vm.broadcast(pk);
         pool.burn(TICK_LOWER, TICK_UPPER, uint128(liquidity));
-        s.vm.prank(caller);
+        s.vm.broadcast(pk);
         pool.collect(caller, TICK_LOWER, TICK_UPPER, type(uint128).max, type(uint128).max);
     } else {
         IPositionManager lpm = v4Lpm(s, chainId);
         PoolKey memory k = s.pools[chainId];
 
-        // Decrease liquidity
-        bytes memory decCalls = encodeDecrease(k, tokenId, liquidity);
-        s.vm.prank(caller);
-        lpm.modifyLiquidities(decCalls, DEADLINE);
+        s.vm.broadcast(pk);
+        lpm.modifyLiquidities(encodeDecrease(k, tokenId, liquidity), DEADLINE);
 
-        // Burn the NFT
-        bytes memory burnCalls = encodeBurn(k, tokenId);
-        s.vm.prank(caller);
-        lpm.modifyLiquidities(burnCalls, DEADLINE);
+        s.vm.broadcast(pk);
+        lpm.modifyLiquidities(encodeBurn(k, tokenId), DEADLINE);
     }
 }
 
-// ── Swap (deterministic direction + amount from Constants.sol) ──
+// ── Swap (broadcast) ──
 
 function executeSwap(
     Scenario storage s,
     uint256 chainId,
     Protocol protocol,
-    address caller,
+    uint256 pk,
     bool zeroForOne
 ) {
+    address caller = s.vm.addr(pk);
     if (isUniswapV3(protocol)) {
         IUniswapV3Pool pool = v3Pool(s, chainId);
         uint160 sqrtPriceLimit = zeroForOne
             ? TickMath.MIN_SQRT_PRICE + 1
             : TickMath.MAX_SQRT_PRICE - 1;
-        s.vm.prank(caller);
+        s.vm.broadcast(pk);
         pool.swap(caller, zeroForOne, AMOUNT_SPECIFIED, sqrtPriceLimit, "");
     } else {
         PoolSwapTest router = v4SwapRouter(s, chainId);
         PoolKey memory k = s.pools[chainId];
-        s.vm.prank(caller);
+        s.vm.broadcast(pk);
         router.swap(
             k,
             SwapParams({
@@ -282,78 +269,93 @@ function executeSwap(
     }
 }
 
-// ── Recipe selector: closest known Δ⁺ ──
-
-function selectRecipe(uint128 targetDeltaPlus) pure returns (Recipe memory) {
-    if (targetDeltaPlus == 0) return recipeEquilibrium();
-
-    // Midpoints between known Δ⁺ values for nearest-match selection
-    // MILD=0.038, CROWDOUT=0.398 → midpoint ≈ 0.218
-    uint128 midMildCrowdout = uint128((uint256(DELTA_MILD) + uint256(DELTA_CROWDOUT)) / 2);
-
-    if (targetDeltaPlus <= midMildCrowdout) return recipeMild();
-    return recipeCrowdout();
-}
-
-// ── deltaPlusFactory ──
-// Takes a target Δ⁺ and executes the on-chain behavior that yields it.
-// Selects the closest known recipe (reverse-engineered from unit tests)
-// and replays the exact mint/swap/burn sequence.
+// ═══════════════════════════════════════════════════════════════════
+// deltaPlusFactory — single-block recipes
 //
-// Returns the recipe used so the caller knows the expected Δ⁺.
+// Broadcasts real transactions: mint A, mint B, swap(s), burn B, burn A.
+// All land in a single block → lifetime = 1 for both positions.
+// Works for equilibrium (delta-plus=0) and mild (delta-plus~0.038).
+//
+// For multi-block recipes (crowdout), use the phased functions below.
+// ═══════════════════════════════════════════════════════════════════
 
 function deltaPlusFactory(
     Scenario storage s,
     uint256 chainId,
     Protocol protocol,
-    address lpPassive,
-    address lpSophisticated,
-    address swapper,
+    uint256 lpPassivePK,
+    uint256 lpSophisticatedPK,
+    uint256 swapperPK,
     uint128 targetDeltaPlus
 ) returns (Recipe memory recipe) {
     recipe = selectRecipe(targetDeltaPlus);
+    require(!recipe.multiBlock, "Scenario: use phased functions for multi-block recipes");
 
-    // Block 1: LP_passive mints capitalA
-    uint256 tokenA = mintPosition(s, chainId, protocol, lpPassive, recipe.capitalA);
+    uint256 tokenA = mintPosition(s, chainId, protocol, lpPassivePK, recipe.capitalA);
+    uint256 tokenB = mintPosition(s, chainId, protocol, lpSophisticatedPK, recipe.capitalB);
 
-    // Advance blocks before LP_sophisticated enters
-    if (recipe.blockAdvanceBeforeB > 0) {
-        s.vm.roll(block.number + recipe.blockAdvanceBeforeB);
-    }
-
-    // LP_sophisticated mints capitalB
-    uint256 tokenB = mintPosition(s, chainId, protocol, lpSophisticated, recipe.capitalB);
-
-    // Swaps while both LPs active
     for (uint256 i; i < recipe.numSwapsBeforeBurn; ++i) {
-        executeSwap(s, chainId, protocol, swapper, ZERO_FOR_ONE);
+        executeSwap(s, chainId, protocol, swapperPK, ZERO_FOR_ONE);
     }
 
-    // Reverse swap if round-trip recipe (US3-F pattern)
-    if (recipe.reverseSwap) {
-        if (recipe.blockLifetimeB > 0) {
-            s.vm.roll(block.number + recipe.blockLifetimeB);
-        }
-        executeSwap(s, chainId, protocol, swapper, !ZERO_FOR_ONE);
-    }
+    burnPosition(s, chainId, protocol, lpSophisticatedPK, tokenB, recipe.capitalB);
+    burnPosition(s, chainId, protocol, lpPassivePK, tokenA, recipe.capitalA);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Phased execution for multi-block recipes (crowdout / US3-F)
+//
+// Phase 1: LP_passive mints. Wait N blocks.
+// Phase 2: LP_sophisticated mints, swaps, reverse swap, LP_sophisticated burns.
+//          Wait N blocks.
+// Phase 3: Swap (only passive active), LP_passive burns.
+//
+// Each phase is a separate script invocation. The script stores
+// tokenIds between phases via .env or on-chain state.
+// ═══════════════════════════════════════════════════════════════════
+
+function crowdoutPhase1(
+    Scenario storage s,
+    uint256 chainId,
+    Protocol protocol,
+    uint256 lpPassivePK,
+    uint256 capitalA
+) returns (uint256 tokenA) {
+    tokenA = mintPosition(s, chainId, protocol, lpPassivePK, capitalA);
+}
+
+function crowdoutPhase2(
+    Scenario storage s,
+    uint256 chainId,
+    Protocol protocol,
+    uint256 lpSophisticatedPK,
+    uint256 swapperPK,
+    uint256 capitalB
+) returns (uint256 tokenB) {
+    tokenB = mintPosition(s, chainId, protocol, lpSophisticatedPK, capitalB);
+
+    // Forward swap
+    executeSwap(s, chainId, protocol, swapperPK, ZERO_FOR_ONE);
+
+    // Reverse swap (round-trip)
+    executeSwap(s, chainId, protocol, swapperPK, !ZERO_FOR_ONE);
 
     // LP_sophisticated exits
-    burnPosition(s, chainId, protocol, lpSophisticated, tokenB, recipe.capitalB);
+    burnPosition(s, chainId, protocol, lpSophisticatedPK, tokenB, capitalB);
+}
 
-    // Swaps after B exits (only passive active)
-    if (recipe.numSwapsAfterBurnB > 0) {
-        if (recipe.blockLifetimeAAfterB > 0) {
-            s.vm.roll(block.number + recipe.blockLifetimeAAfterB);
-        }
-        for (uint256 i; i < recipe.numSwapsAfterBurnB; ++i) {
-            executeSwap(s, chainId, protocol, swapper, ZERO_FOR_ONE);
-        }
-    }
+function crowdoutPhase3(
+    Scenario storage s,
+    uint256 chainId,
+    Protocol protocol,
+    uint256 lpPassivePK,
+    uint256 swapperPK,
+    uint256 tokenA,
+    uint256 capitalA
+) {
+    // Final swap (only passive active)
+    executeSwap(s, chainId, protocol, swapperPK, ZERO_FOR_ONE);
 
     // LP_passive exits
-    if (recipe.blockLifetimeAAfterB > 0 && recipe.numSwapsAfterBurnB == 0) {
-        s.vm.roll(block.number + recipe.blockLifetimeAAfterB);
-    }
-    s.vm.roll(block.number + 1);
-    burnPosition(s, chainId, protocol, lpPassive, tokenA, recipe.capitalA);
+    burnPosition(s, chainId, protocol, lpPassivePK, tokenA, capitalA);
 }

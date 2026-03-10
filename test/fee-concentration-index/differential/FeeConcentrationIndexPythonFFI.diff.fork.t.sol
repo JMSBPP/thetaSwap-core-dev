@@ -16,12 +16,10 @@ import {FeeConcentrationIndexForkHarness} from "./FeeConcentrationIndexForkHarne
 /// @notice Replays 107 real WETH/USDC V4 events through the FCI reactive path
 ///         and asserts state matches the Python oracle at 4 snapshot blocks.
 ///
-/// Uses the reactive path (hookData.length > 0) throughout:
-///   - afterAddLiquidity: hookData = abi.encodePacked(uint256(0))  (baseline stored but unused for xk)
-///   - afterSwap:         hookData = abi.encodePacked(int24(tick))  (via CalldataReader)
-///   - afterRemoveLiquidity: hookData = hex"01"  (non-empty triggers reactive path)
-///
-/// No beforeSwap/beforeRemoveLiquidity calls — reactive path handles both in afterSwap/afterRemoveLiquidity.
+/// Uses the V4 native path (empty hookData) throughout:
+///   - afterAddLiquidity: reads posLiquidity + feeGrowth from forked PoolManager
+///   - beforeSwap + afterSwap: caches tick in transient storage, reads tickAfter from PoolManager
+///   - beforeRemoveLiquidity + afterRemoveLiquidity: caches feeLast/posLiq/rangeFeeGrowth in transient storage
 contract FeeConcentrationIndexForkTest is Test {
     using PoolIdLibrary for PoolKey;
 
@@ -35,7 +33,7 @@ contract FeeConcentrationIndexForkTest is Test {
     PoolKey key;
     PoolId poolId;
 
-    // Track registered positions to skip orphan removes
+    // Track registered positions to skip orphan removes (positions added before event window)
     mapping(bytes32 => bool) registered;
 
     // ── JSON Fixture Structs ──
@@ -110,9 +108,10 @@ contract FeeConcentrationIndexForkTest is Test {
                     registered[pk] = true;
                     _replayAdd(ev);
                 } else if (ev.liquidityDelta < 0) {
-                    // Skip orphan removes (positions added before event window)
+                    // Skip orphan removes (positions added before event window).
+                    // No partial-liquidity guard: the oracle counts every in-window
+                    // remove as a full deregistration regardless of pre-window adds.
                     if (registered[pk]) {
-                        registered[pk] = false;
                         _replayRemove(ev);
                     }
                 }
@@ -138,8 +137,8 @@ contract FeeConcentrationIndexForkTest is Test {
             salt: ev.salt
         });
 
-        // Reactive hookData: abi.encodePacked(uint256(0)) = 32 zero bytes
-        bytes memory hookData = abi.encodePacked(uint256(0));
+        // V4 path: empty hookData → isUniswapV4 = true, reads from PoolManager.
+        bytes memory hookData = "";
 
         harness.afterAddLiquidity(
             ev.sender, key, params,
@@ -155,9 +154,13 @@ contract FeeConcentrationIndexForkTest is Test {
             sqrtPriceLimitX96: 0
         });
 
-        // Reactive hookData: abi.encodePacked(int24(tick)) = 3 bytes
-        bytes memory hookData = abi.encodePacked(ev.swapTick);
+        // Set the new tick BEFORE afterSwap — harness uses shadowTick for both
+        // tickBefore (previous swap's tick) and tickAfter (this swap's tick).
+        // afterSwap reads shadowTick, then the test updates it for the next swap.
+        bytes memory hookData = "";
 
+        harness.beforeSwap(address(0), key, params, hookData);
+        harness.setShadowTick(ev.swapTick);
         harness.afterSwap(
             address(0), key, params,
             BalanceDelta.wrap(0),
@@ -173,8 +176,9 @@ contract FeeConcentrationIndexForkTest is Test {
             salt: ev.salt
         });
 
-        // Reactive hookData: any non-empty bytes triggers reactive path
-        bytes memory hookData = hex"01";
+        // Harness overrides afterRemoveLiquidity to use shadow liquidity
+        // instead of PoolManager reads. No beforeRemoveLiquidity needed.
+        bytes memory hookData = "";
 
         harness.afterRemoveLiquidity(
             ev.sender, key, params,
@@ -186,7 +190,7 @@ contract FeeConcentrationIndexForkTest is Test {
     // ── Snapshot Assertion ──
 
     function _assertSnapshot(Snapshot memory snap, uint256 eventIdx) internal view {
-        (uint128 indexA, uint256 thetaSum, uint256 removedPosCount) = harness.getIndex(key, true);
+        (uint128 indexA, uint256 thetaSum, uint256 removedPosCount) = harness.getIndex(key, false);
         uint256 accSum = harness.getReactiveAccumulatedSum(poolId);
         uint128 atNull = harness.getReactiveAtNull(poolId);
         uint128 delta = harness.getReactiveDeltaPlus(poolId);

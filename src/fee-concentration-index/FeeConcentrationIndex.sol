@@ -56,7 +56,7 @@ contract FeeConcentrationIndex {
         BalanceDelta,
         BalanceDelta,
         bytes calldata hookData
-    ) external returns (bytes4, BalanceDelta) {
+    ) external virtual returns (bytes4, BalanceDelta) {
         (PoolId poolId, bytes32 positionKey) = derivePoolAndPosition(sender, key, params, hookData);
         TickRange rk = fromTicks(params.tickLower, params.tickUpper);
        (uint128 posLiquidity,) = getPositionFeeGrowthInsideLast0(hookData, _poolManager(), poolId, positionKey);
@@ -80,7 +80,7 @@ contract FeeConcentrationIndex {
         PoolKey calldata key,
         SwapParams calldata,
         bytes calldata hookData
-    ) external returns (bytes4, BeforeSwapDelta, uint24) {
+    ) external virtual returns (bytes4, BeforeSwapDelta, uint24) {
         PoolId poolId = PoolIdLibrary.toId(key);
         int24 tick = getCurrentTick(hookData, _poolManager(), poolId);
         writeCacheTick(hookData, tick);
@@ -96,7 +96,7 @@ contract FeeConcentrationIndex {
         SwapParams calldata,
         BalanceDelta,
         bytes calldata hookData
-    ) external returns (bytes4, int128) {
+    ) external virtual returns (bytes4, int128) {
         PoolId poolId = PoolIdLibrary.toId(key);
         int24 tickBefore = readCacheTick(hookData);
         int24 tickAfter = getCurrentTick(hookData, _poolManager(), poolId);
@@ -138,7 +138,7 @@ contract FeeConcentrationIndex {
         BalanceDelta,
         BalanceDelta,
         bytes calldata hookData
-    ) external returns (bytes4, BalanceDelta) {
+    ) external virtual returns (bytes4, BalanceDelta) {
         (PoolId poolId, bytes32 positionKey) = derivePoolAndPosition(sender, key, params, hookData);
 
         (uint256 positionFeeLast0X128, uint128 posLiq, uint256 rangeFeeGrowthNow0X128) = readCacheRemovalData(hookData);

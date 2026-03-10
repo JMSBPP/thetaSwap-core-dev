@@ -8,7 +8,7 @@ import {
     encodeSwapHookData, decodeSwapHookData,
     encodeMintHookData, decodeMintHookData,
     encodeBurnHookData, decodeBurnHookData
-} from "../../../src/fee-concentration-index/types/HookDataFlagsMod.sol";
+} from "../../../src/reactive-integration/uniswapV3/types/HookDataFlagsMod.sol";
 
 contract HookDataFlagsTest is Test {
     function test_flagConstants_areSingleBits() public pure {

@@ -106,6 +106,8 @@ contract ThetaSwapReactive {
     }
 }
 
+
+// template to fill out with own modules
 contract ReactiveShell {
     ISubscriptionService immutable service;
 

@@ -12,7 +12,7 @@ import {
     deregisterPosition, addStateTerm,
     setFeeGrowthBaseline, getFeeGrowthBaseline, deleteFeeGrowthBaseline
 } from "../../fee-concentration-index/modules/FeeConcentrationIndexStorageMod.sol";
-import {isUniswapV3Reactive} from "../../fee-concentration-index/types/HookDataFlagsMod.sol";
+import {isUniswapV3Reactive} from "../uniswapV3/types/HookDataFlagsMod.sol";
 import {SwapCount} from "../../fee-concentration-index/types/SwapCountMod.sol";
 import {BlockCount} from "../../fee-concentration-index/types/BlockCountMod.sol";
 

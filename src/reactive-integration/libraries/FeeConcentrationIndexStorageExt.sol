@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {isUniswapV3Reactive} from "../../fee-concentration-index/types/HookDataFlagsMod.sol";
+import {isUniswapV3Reactive} from "../uniswapV3/types/HookDataFlagsMod.sol";
 import {
     t_storeTick, t_readTick,
     t_cacheRemovalData, t_readRemovalData

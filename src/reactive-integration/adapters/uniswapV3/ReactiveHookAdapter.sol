@@ -21,6 +21,10 @@ import {fromV3Pool} from "../../libraries/PoolKeyExtMod.sol";
 // Destination-chain adapter: receives callbacks from Reactive Network callback proxy,
 // translates V3 event data into FCI state updates on the reactive storage slot.
 // Thin contract shell — all logic in Mod files. SCOP compliant (no is/library/modifier).
+// CallbackShell, RvmId, CallbackProxy, CallbackStorage, CallbackProxyRegistryLib
+// → now in modules/CallbackMod.sol, types/RvmId.sol, types/CallbackProxy.sol,
+//   modules/CallbackStorageMod.sol, libraries/CallbackProxyRegistryLib.sol
+
 contract ReactiveHookAdapter {
     address public rvmId;
     address immutable owner;
@@ -64,16 +68,33 @@ contract ReactiveHookAdapter {
         int24 tickMax = data.tickBefore > data.tick ? data.tickBefore : data.tick;
         incrementOverlappingRanges($, poolId, tickMin, tickMax);
     }
-
-    function onV3Mint(address rvmSender, V3MintData calldata data) external {
+    function onV3MintTranstionToHook(address rvmSender, V3MintData calldata data) external{
+	// note: This is checked for a type on reactive
         requireAuthorized(msg.sender, authorizedCallers);
         if (rvmSender != rvmId) revert InvalidRvmId();
+	// ============================================
+	PoolKey memory key = fromV3Pool(data.pool, address(this));
+        PoolId poolId = PoolIdLibrary.toId(key);
+
+
+	
+    }
+
+    function onV3Mint(address rvmSender, V3MintData calldata data) external {
+	// note: This is checked for a type on reactive
+        requireAuthorized(msg.sender, authorizedCallers);
+        if (rvmSender != rvmId) revert InvalidRvmId();
+	// ============================================
         FeeConcentrationIndexStorage storage $ = reactiveFciStorage();
+
         PoolKey memory key = fromV3Pool(data.pool, address(this));
         PoolId poolId = PoolIdLibrary.toId(key);
         bytes32 posKey = v3PositionKey(data.owner, data.tickLower, data.tickUpper);
-        TickRange rk = fromTicks(data.tickLower, data.tickUpper);
-        registerPosition($, poolId, rk, posKey, data.tickLower, data.tickUpper, data.liquidity);
+
+
+	TickRange rk = fromTicks(data.tickLower, data.tickUpper);
+
+	registerPosition($, poolId, rk, posKey, data.tickLower, data.tickUpper, data.liquidity);
         // No feeGrowthInside snapshot needed: reactive callbacks arrive asynchronously,
         // so V3 pool state at callback time ≠ state at event emission time. x_k is
         // computed purely from liquidity shares at burn time (exact for V3 since
@@ -84,6 +105,7 @@ contract ReactiveHookAdapter {
     function onV3Burn(address rvmSender, V3BurnData calldata data) external {
         requireAuthorized(msg.sender, authorizedCallers);
         if (rvmSender != rvmId) revert InvalidRvmId();
+
         FeeConcentrationIndexStorage storage $ = reactiveFciStorage();
         PoolKey memory key = fromV3Pool(data.pool, address(this));
         PoolId poolId = PoolIdLibrary.toId(key);

@@ -149,6 +149,10 @@ function resolveDeployments(uint256 chainId, Protocol protocol)
     }
 }
 
+function sepoliaV3Factory() pure returns (address) {
+    return 0x0227628f3F023bb0B980b67D528571c95c6DaC1c;
+}
+
 function sepoliaV3CallbackRouter() pure returns (address) {
     return 0x1284E9d71a87276d05abD860bD9990dce9Dd721E;
 }

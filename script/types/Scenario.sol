@@ -2,8 +2,11 @@
 pragma solidity ^0.8.26;
 
 // Multi-chain, multi-protocol deterministic scenario dispatch for FCI scripts.
-// Free functions operate on Scenario storage — routing mint/burn/swap
+// Free functions operate on Context + Scenario storage — routing mint/burn/swap
 // to V3 (IUniswapV3Pool) or V4 (PositionManager) based on Protocol.
+//
+// Context holds environment state (pools, accounts, routers).
+// Scenario tracks recipe execution (tokenIds, deltaPlus).
 //
 // BROADCAST MODE: all pool calls use vm.broadcast(pk) to sign real
 // transactions on the live chain. The reactive adapter hears these events.
@@ -18,20 +21,15 @@ import {PoolSwapTest} from "v4-core/src/test/PoolSwapTest.sol";
 import {Actions} from "@uniswap/v4-periphery/src/libraries/Actions.sol";
 import {Planner, Plan} from "@uniswap/v4-periphery/test/shared/Planner.sol";
 import {INDEX_ONE} from "../../src/fee-concentration-index/types/FeeConcentrationStateMod.sol";
-import {fromV3Pool} from "../../src/reactive-integration/libraries/PoolKeyExtMod.sol";
 import {V3CallbackRouter} from
     "../../src/reactive-integration/adapters/uniswapV3/V3CallbackRouter.sol";
 import {Protocol, isUniswapV3, isUniswapV4} from "./Protocol.sol";
+import {Context} from "./Context.sol";
 import "../utils/Constants.sol";
-import {Vm} from "forge-std/Vm.sol";
 
 struct Scenario {
-    Vm vm;
-    mapping(uint256 chainId => PoolKey pool) pools;
-    mapping(uint256 chainId => mapping(Protocol => address)) positionManager;
-    mapping(uint256 chainId => address) swapRouter;
-    mapping(uint256 chainId => uint256[]) tokenIds;
-    mapping(uint256 chainId => address) v3Router;
+    uint256[] tokenIds;
+    uint128 deltaPlus;
 }
 
 // ── Known delta-plus thresholds (Q128, derived from unit tests) ──
@@ -97,50 +95,6 @@ function selectRecipe(uint128 targetDeltaPlus) pure returns (Recipe memory) {
     return recipeCrowdout();
 }
 
-// ── Registration ──
-
-function registerV3Pool(
-    Scenario storage s,
-    uint256 chainId,
-    IUniswapV3Pool pool,
-    address adapter,
-    address router
-) {
-    s.pools[chainId] = fromV3Pool(pool, adapter);
-    s.positionManager[chainId][Protocol.UniswapV3] = address(pool);
-    s.v3Router[chainId] = router;
-}
-
-function registerV4Pool(
-    Scenario storage s,
-    uint256 chainId,
-    PoolKey memory pool,
-    address posMgr,
-    address swapRtr
-) {
-    s.pools[chainId] = pool;
-    s.positionManager[chainId][Protocol.UniswapV4] = posMgr;
-    s.swapRouter[chainId] = swapRtr;
-}
-
-// ── Resolution ──
-
-function poolKey(Scenario storage s, uint256 chainId) view returns (PoolKey memory) {
-    return s.pools[chainId];
-}
-
-function v3Pool(Scenario storage s, uint256 chainId) view returns (IUniswapV3Pool) {
-    return IUniswapV3Pool(s.positionManager[chainId][Protocol.UniswapV3]);
-}
-
-function v4Lpm(Scenario storage s, uint256 chainId) view returns (IPositionManager) {
-    return IPositionManager(s.positionManager[chainId][Protocol.UniswapV4]);
-}
-
-function v4SwapRouter(Scenario storage s, uint256 chainId) view returns (PoolSwapTest) {
-    return PoolSwapTest(s.swapRouter[chainId]);
-}
-
 // ── V4 encoding (pure) ──
 
 uint128 constant MAX_SLIPPAGE = type(uint128).max;
@@ -179,90 +133,81 @@ function encodeBurn(PoolKey memory k, uint256 tokenId)
 // ── Mint (broadcast: signs real tx from pk) ──
 
 function mintPosition(
+    Context storage ctx,
     Scenario storage s,
-    uint256 chainId,
     Protocol protocol,
     uint256 pk,
     uint256 liquidity
 ) returns (uint256 tokenId) {
-    address caller = s.vm.addr(pk);
+    address caller = ctx.vm.addr(pk);
     if (isUniswapV3(protocol)) {
-        IUniswapV3Pool pool = v3Pool(s, chainId);
-        V3CallbackRouter router = V3CallbackRouter(s.v3Router[chainId]);
-        s.vm.broadcast(pk);
-        router.mint(pool, caller, TICK_LOWER, TICK_UPPER, uint128(liquidity));
+        V3CallbackRouter router = V3CallbackRouter(ctx.v3Router);
+        ctx.vm.broadcast(pk);
+        router.mint(ctx.v3Pool, caller, TICK_LOWER, TICK_UPPER, uint128(liquidity));
     } else {
-        IPositionManager lpm = v4Lpm(s, chainId);
-        PoolKey memory k = s.pools[chainId];
+        IPositionManager lpm = IPositionManager(ctx.v4PositionManager);
         tokenId = lpm.nextTokenId();
-        bytes memory calls = encodeMint(k, liquidity, caller);
-        s.vm.broadcast(pk);
+        bytes memory calls = encodeMint(ctx.v4Pool, liquidity, caller);
+        ctx.vm.broadcast(pk);
         lpm.modifyLiquidities(calls, DEADLINE);
-        s.tokenIds[chainId].push(tokenId);
+        s.tokenIds.push(tokenId);
     }
 }
 
 // ── Burn (broadcast) ──
 
 function burnPosition(
-    Scenario storage s,
-    uint256 chainId,
+    Context storage ctx,
     Protocol protocol,
     uint256 pk,
     uint256 tokenId,
     uint256 liquidity
 ) {
-    address caller = s.vm.addr(pk);
+    address caller = ctx.vm.addr(pk);
     if (isUniswapV3(protocol)) {
-        IUniswapV3Pool pool = v3Pool(s, chainId);
-
         // Zero-burn to trigger fee accounting
-        s.vm.broadcast(pk);
-        pool.burn(TICK_LOWER, TICK_UPPER, 0);
-        s.vm.broadcast(pk);
-        pool.collect(caller, TICK_LOWER, TICK_UPPER, type(uint128).max, type(uint128).max);
+        ctx.vm.broadcast(pk);
+        ctx.v3Pool.burn(TICK_LOWER, TICK_UPPER, 0);
+        ctx.vm.broadcast(pk);
+        ctx.v3Pool.collect(caller, TICK_LOWER, TICK_UPPER, type(uint128).max, type(uint128).max);
 
         // Full burn
-        s.vm.broadcast(pk);
-        pool.burn(TICK_LOWER, TICK_UPPER, uint128(liquidity));
-        s.vm.broadcast(pk);
-        pool.collect(caller, TICK_LOWER, TICK_UPPER, type(uint128).max, type(uint128).max);
+        ctx.vm.broadcast(pk);
+        ctx.v3Pool.burn(TICK_LOWER, TICK_UPPER, uint128(liquidity));
+        ctx.vm.broadcast(pk);
+        ctx.v3Pool.collect(caller, TICK_LOWER, TICK_UPPER, type(uint128).max, type(uint128).max);
     } else {
-        IPositionManager lpm = v4Lpm(s, chainId);
-        PoolKey memory k = s.pools[chainId];
+        IPositionManager lpm = IPositionManager(ctx.v4PositionManager);
 
-        s.vm.broadcast(pk);
-        lpm.modifyLiquidities(encodeDecrease(k, tokenId, liquidity), DEADLINE);
+        ctx.vm.broadcast(pk);
+        lpm.modifyLiquidities(encodeDecrease(ctx.v4Pool, tokenId, liquidity), DEADLINE);
 
-        s.vm.broadcast(pk);
-        lpm.modifyLiquidities(encodeBurn(k, tokenId), DEADLINE);
+        ctx.vm.broadcast(pk);
+        lpm.modifyLiquidities(encodeBurn(ctx.v4Pool, tokenId), DEADLINE);
     }
 }
 
 // ── Swap (broadcast) ──
 
 function executeSwap(
-    Scenario storage s,
-    uint256 chainId,
+    Context storage ctx,
     Protocol protocol,
     uint256 pk,
     bool zeroForOne
 ) {
-    address caller = s.vm.addr(pk);
+    address caller = ctx.vm.addr(pk);
     if (isUniswapV3(protocol)) {
-        IUniswapV3Pool pool = v3Pool(s, chainId);
-        V3CallbackRouter router = V3CallbackRouter(s.v3Router[chainId]);
+        V3CallbackRouter router = V3CallbackRouter(ctx.v3Router);
         uint160 sqrtPriceLimit = zeroForOne
             ? TickMath.MIN_SQRT_PRICE + 1
             : TickMath.MAX_SQRT_PRICE - 1;
-        s.vm.broadcast(pk);
-        router.swap(pool, caller, zeroForOne, AMOUNT_SPECIFIED, sqrtPriceLimit);
+        ctx.vm.broadcast(pk);
+        router.swap(ctx.v3Pool, caller, zeroForOne, AMOUNT_SPECIFIED, sqrtPriceLimit);
     } else {
-        PoolSwapTest router = v4SwapRouter(s, chainId);
-        PoolKey memory k = s.pools[chainId];
-        s.vm.broadcast(pk);
+        PoolSwapTest router = PoolSwapTest(ctx.v4SwapRouter);
+        ctx.vm.broadcast(pk);
         router.swap(
-            k,
+            ctx.v4Pool,
             SwapParams({
                 zeroForOne: zeroForOne,
                 amountSpecified: AMOUNT_SPECIFIED,
@@ -287,26 +232,25 @@ function executeSwap(
 // ═══════════════════════════════════════════════════════════════════
 
 function deltaPlusFactory(
+    Context storage ctx,
     Scenario storage s,
-    uint256 chainId,
     Protocol protocol,
-    uint256 lpPassivePK,
-    uint256 lpSophisticatedPK,
-    uint256 swapperPK,
     uint128 targetDeltaPlus
 ) returns (Recipe memory recipe) {
     recipe = selectRecipe(targetDeltaPlus);
     require(!recipe.multiBlock, "Scenario: use phased functions for multi-block recipes");
 
-    uint256 tokenA = mintPosition(s, chainId, protocol, lpPassivePK, recipe.capitalA);
-    uint256 tokenB = mintPosition(s, chainId, protocol, lpSophisticatedPK, recipe.capitalB);
+    uint256 tokenA = mintPosition(ctx, s, protocol, ctx.accounts.lpPassive.privateKey, recipe.capitalA);
+    uint256 tokenB = mintPosition(ctx, s, protocol, ctx.accounts.lpSophisticated.privateKey, recipe.capitalB);
 
     for (uint256 i; i < recipe.numSwapsBeforeBurn; ++i) {
-        executeSwap(s, chainId, protocol, swapperPK, ZERO_FOR_ONE);
+        executeSwap(ctx, protocol, ctx.accounts.swapper.privateKey, ZERO_FOR_ONE);
     }
 
-    burnPosition(s, chainId, protocol, lpSophisticatedPK, tokenB, recipe.capitalB);
-    burnPosition(s, chainId, protocol, lpPassivePK, tokenA, recipe.capitalA);
+    burnPosition(ctx, protocol, ctx.accounts.lpSophisticated.privateKey, tokenB, recipe.capitalB);
+    burnPosition(ctx, protocol, ctx.accounts.lpPassive.privateKey, tokenA, recipe.capitalA);
+
+    s.deltaPlus = targetDeltaPlus;
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -322,47 +266,44 @@ function deltaPlusFactory(
 // ═══════════════════════════════════════════════════════════════════
 
 function crowdoutPhase1(
+    Context storage ctx,
     Scenario storage s,
-    uint256 chainId,
     Protocol protocol,
-    uint256 lpPassivePK,
     uint256 capitalA
 ) returns (uint256 tokenA) {
-    tokenA = mintPosition(s, chainId, protocol, lpPassivePK, capitalA);
+    tokenA = mintPosition(ctx, s, protocol, ctx.accounts.lpPassive.privateKey, capitalA);
 }
 
 function crowdoutPhase2(
+    Context storage ctx,
     Scenario storage s,
-    uint256 chainId,
     Protocol protocol,
-    uint256 lpSophisticatedPK,
-    uint256 swapperPK,
     uint256 capitalB
 ) returns (uint256 tokenB) {
-    tokenB = mintPosition(s, chainId, protocol, lpSophisticatedPK, capitalB);
+    tokenB = mintPosition(ctx, s, protocol, ctx.accounts.lpSophisticated.privateKey, capitalB);
 
     // Forward swap
-    executeSwap(s, chainId, protocol, swapperPK, ZERO_FOR_ONE);
+    executeSwap(ctx, protocol, ctx.accounts.swapper.privateKey, ZERO_FOR_ONE);
 
     // Reverse swap (round-trip)
-    executeSwap(s, chainId, protocol, swapperPK, !ZERO_FOR_ONE);
+    executeSwap(ctx, protocol, ctx.accounts.swapper.privateKey, !ZERO_FOR_ONE);
 
     // LP_sophisticated exits
-    burnPosition(s, chainId, protocol, lpSophisticatedPK, tokenB, capitalB);
+    burnPosition(ctx, protocol, ctx.accounts.lpSophisticated.privateKey, tokenB, capitalB);
 }
 
 function crowdoutPhase3(
+    Context storage ctx,
     Scenario storage s,
-    uint256 chainId,
     Protocol protocol,
-    uint256 lpPassivePK,
-    uint256 swapperPK,
     uint256 tokenA,
     uint256 capitalA
 ) {
     // Final swap (only passive active)
-    executeSwap(s, chainId, protocol, swapperPK, ZERO_FOR_ONE);
+    executeSwap(ctx, protocol, ctx.accounts.swapper.privateKey, ZERO_FOR_ONE);
 
     // LP_passive exits
-    burnPosition(s, chainId, protocol, lpPassivePK, tokenA, capitalA);
+    burnPosition(ctx, protocol, ctx.accounts.lpPassive.privateKey, tokenA, capitalA);
+
+    s.deltaPlus = DELTA_CROWDOUT;
 }

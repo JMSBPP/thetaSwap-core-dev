@@ -70,4 +70,22 @@ contract HookDataFlagsTest is Test {
         assertFalse(isV3(0));
         assertFalse(isV4(0));
     }
+
+    function testFuzz_swapHookData_roundtrip(uint8 flags, int24 tickBefore, int24 tickAfter) public pure {
+        bytes memory encoded = encodeSwapHookData(flags, tickBefore, tickAfter);
+        (uint8 f, int24 tb, int24 ta) = decodeSwapHookData(encoded);
+        assertEq(f, flags);
+        assertEq(tb, tickBefore);
+        assertEq(ta, tickAfter);
+    }
+
+    function testFuzz_mintHookData_roundtrip(uint8 flags, address owner, int24 tickLower, int24 tickUpper, uint128 liquidity) public pure {
+        bytes memory encoded = encodeMintHookData(flags, owner, tickLower, tickUpper, liquidity);
+        (uint8 f, address o, int24 tl, int24 tu, uint128 liq) = decodeMintHookData(encoded);
+        assertEq(f, flags);
+        assertEq(o, owner);
+        assertEq(tl, tickLower);
+        assertEq(tu, tickUpper);
+        assertEq(liq, liquidity);
+    }
 }

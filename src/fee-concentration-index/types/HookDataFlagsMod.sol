@@ -8,15 +8,15 @@ uint8 constant V3_FLAG       = 0x02; // Uniswap V3 source
 uint8 constant V4_FLAG       = 0x04; // Uniswap V4 source
 
 function isReactive(uint8 flags) pure returns (bool) {
-    return flags & REACTIVE_FLAG != 0;
+    return (flags & REACTIVE_FLAG) != 0;
 }
 
 function isV3(uint8 flags) pure returns (bool) {
-    return flags & V3_FLAG != 0;
+    return (flags & V3_FLAG) != 0;
 }
 
 function isV4(uint8 flags) pure returns (bool) {
-    return flags & V4_FLAG != 0;
+    return (flags & V4_FLAG) != 0;
 }
 
 // ── Encode helpers (used by ReactLogicMod to build callback hookData) ──

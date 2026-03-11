@@ -26,6 +26,7 @@ struct FciVaultStorage {
     uint256 lastHwmTimestamp;
     bool settled;
     uint256 longPayoutPerToken;  // Q96-scaled
+    address collateralToken;
 }
 
 error VaultAlreadySettled();

@@ -99,6 +99,8 @@ function redeem(address redeemer, uint256 amount) {
 error VaultAlreadySettledPoke();
 
 /// @dev Read Δ⁺ from FCI oracle, convert to sqrtPrice, apply decay, update HWM.
+/// When δ⁺ = 0 (no fee concentration), only decay is applied — no HWM ratchet.
+/// deltaPlusToSqrtPriceX96(0) returns Q96 (1.0) which would falsely inflate HWM.
 function poke() {
     FciVaultStorage storage vs = getFciVaultStorage();
     if (vs.settled) revert VaultAlreadySettledPoke();
@@ -106,11 +108,14 @@ function poke() {
     uint128 deltaPlus = IFeeConcentrationIndex(address(vs.poolKey.hooks))
         .getDeltaPlus(vs.poolKey, vs.reactive);
 
-    uint160 currentSqrtPrice = deltaPlusToSqrtPriceX96(deltaPlus);
-
     uint256 dt = block.timestamp - vs.lastHwmTimestamp;
     uint160 decayed = applyDecay(vs.sqrtPriceHWM, dt, vs.halfLifeSeconds);
 
-    vs.sqrtPriceHWM = updateHWM(decayed, currentSqrtPrice);
+    if (deltaPlus > 0) {
+        uint160 currentSqrtPrice = deltaPlusToSqrtPriceX96(deltaPlus);
+        vs.sqrtPriceHWM = updateHWM(decayed, currentSqrtPrice);
+    } else {
+        vs.sqrtPriceHWM = decayed;
+    }
     vs.lastHwmTimestamp = block.timestamp;
 }

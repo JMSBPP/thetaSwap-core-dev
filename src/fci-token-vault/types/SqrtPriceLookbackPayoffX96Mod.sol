@@ -51,11 +51,22 @@ function updateHWM(uint160 hwm, uint160 currentPrice) pure returns (uint160) {
 function lookbackPayoffX96(uint160 sqrtPriceHWM, uint160 sqrtPriceStrike) pure returns (uint256) {
     if (sqrtPriceHWM <= sqrtPriceStrike) return 0;
 
+    // Guard: if hwm/strike ratio is extreme, divX96 will overflow.
+    // When hwm > strike * 2^64, ratio⁴ certainly exceeds cap.
+    if (uint256(sqrtPriceHWM) > uint256(sqrtPriceStrike) << 64) return SqrtPriceLibrary.Q96;
+
     // ratio = sqrtPriceHWM / sqrtPriceStrike, Q96-scaled
     uint256 ratioX96 = SqrtPriceLibrary.divX96(sqrtPriceHWM, sqrtPriceStrike);
 
+    // Guard: if ratio² would overflow mulDiv (no 512-bit intermediate in Solady),
+    // ratioX96 must fit uint128 so ratioX96² fits uint256.
+    if (ratioX96 > type(uint128).max) return SqrtPriceLibrary.Q96;
+
     // ratio² (Q96-scaled): ratioX96 * ratioX96 / Q96
     uint256 ratioSqX96 = FixedPointMathLib.mulDiv(ratioX96, ratioX96, SqrtPriceLibrary.Q96);
+
+    // Guard: ratioSqX96² must fit uint256 for the next mulDiv.
+    if (ratioSqX96 > type(uint128).max) return SqrtPriceLibrary.Q96;
 
     // ratio⁴ (Q96-scaled): ratioSqX96 * ratioSqX96 / Q96
     uint256 ratioQuadX96 = FixedPointMathLib.mulDiv(ratioSqX96, ratioSqX96, SqrtPriceLibrary.Q96);

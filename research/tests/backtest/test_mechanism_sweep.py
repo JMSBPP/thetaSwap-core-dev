@@ -196,3 +196,48 @@ def test_run_mechanism_sweep_basic():
     )
     assert len(results) == 5  # 2 epoch + 2 decay + 1 window
     assert all(isinstance(r, SweepResult) for r in results)
+
+
+# ── Payoff comparison tests ──
+
+from backtest.mechanism_sweep import PayoffComparison, run_payoff_comparison
+from backtest.oracle_comparison import positions_from_raw_data, build_dual_series
+from econometrics.data import RAW_POSITIONS, DAILY_AT_MAP, DAILY_AT_NULL_MAP, IL_MAP
+from backtest.daily import build_daily_states
+
+
+def test_payoff_comparison_dataclass():
+    pc = PayoffComparison(
+        mechanism_name="decay", params={"half_life_days": 7.0},
+        correlation=0.85, max_divergence=0.05,
+        pct_better_off=0.20, mean_hedge_value=15.0,
+    )
+    assert pc.mechanism_name == "decay"
+
+
+def test_run_payoff_comparison_with_real_data():
+    exits = positions_from_raw_data(RAW_POSITIONS)
+    dual = build_dual_series(exits)
+
+    raw_dicts = [{"burn_date": bd, "blocklife": bl} for bd, bl, _ in RAW_POSITIONS]
+    daily_states = build_daily_states(
+        DAILY_AT_MAP, DAILY_AT_NULL_MAP, IL_MAP, raw_dicts, pool_daily_fee=50_000.0
+    )
+
+    comparisons = run_payoff_comparison(
+        exits=exits,
+        daily_snapshot_baseline=list(dual.daily_snapshot_delta_plus),
+        baseline_days=list(dual.days),
+        daily_states=daily_states,
+        raw_positions=raw_dicts,
+        gamma=0.10,
+        alpha=2.0,
+        delta_star=0.09,
+        epoch_lengths=[7],
+        half_lives=[7.0],
+        window_sizes=[25],
+    )
+    assert len(comparisons) == 3  # 1 epoch + 1 decay + 1 window
+    assert all(isinstance(c, PayoffComparison) for c in comparisons)
+    for c in comparisons:
+        assert 0.0 <= c.pct_better_off <= 1.0

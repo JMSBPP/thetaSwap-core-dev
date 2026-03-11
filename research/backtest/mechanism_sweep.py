@@ -9,10 +9,12 @@ from __future__ import annotations
 
 import math
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace as dc_replace
 from datetime import datetime, timedelta
 
 from backtest.oracle_comparison import PositionExit
+from backtest.payoff import run_exit_payoff_backtest
+from backtest.types import DailyPoolState
 
 
 # ── Epoch-reset mechanism ──────────────────────────────────────────
@@ -301,3 +303,70 @@ def run_mechanism_sweep(
 
     results.sort(key=lambda r: r.correlation, reverse=True)
     return results
+
+
+# ── Payoff pipeline integration ──────────────────────────────────
+
+@dataclass(frozen=True)
+class PayoffComparison:
+    """Full evaluation: series correlation + payoff pipeline metrics."""
+    mechanism_name: str
+    params: dict[str, float | int]
+    correlation: float
+    max_divergence: float
+    pct_better_off: float
+    mean_hedge_value: float
+
+
+def run_payoff_comparison(
+    exits: list[PositionExit],
+    daily_snapshot_baseline: list[float],
+    baseline_days: list[str],
+    daily_states: list[DailyPoolState],
+    raw_positions: list[dict],
+    gamma: float,
+    alpha: float,
+    delta_star: float = 0.09,
+    epoch_lengths: list[int] | None = None,
+    half_lives: list[float] | None = None,
+    window_sizes: list[int] | None = None,
+) -> list[PayoffComparison]:
+    """Run mechanism sweep + payoff pipeline for each candidate.
+
+    For each mechanism, builds modified daily_states where delta_plus
+    is replaced by the mechanism's delta-plus, then runs existing payoff pipeline.
+    """
+    sweep_results = run_mechanism_sweep(
+        exits=exits,
+        daily_snapshot_baseline=daily_snapshot_baseline,
+        baseline_days=baseline_days,
+        epoch_lengths=epoch_lengths,
+        half_lives=half_lives,
+        window_sizes=window_sizes,
+    )
+
+    comparisons: list[PayoffComparison] = []
+
+    for sr in sweep_results:
+        # Build modified daily states with mechanism's delta-plus
+        mech_day_to_dp = dict(zip(sr.series.days, sr.series.delta_plus_values))
+        modified_states = [
+            dc_replace(ds, delta_plus=mech_day_to_dp.get(ds.day, ds.delta_plus))
+            for ds in daily_states
+        ]
+
+        payoff_result = run_exit_payoff_backtest(
+            modified_states, raw_positions, gamma, alpha, delta_star,
+        )
+
+        comparisons.append(PayoffComparison(
+            mechanism_name=sr.mechanism_name,
+            params=sr.params,
+            correlation=sr.correlation,
+            max_divergence=sr.max_divergence,
+            pct_better_off=payoff_result.pct_better_off,
+            mean_hedge_value=payoff_result.mean_hedge_value,
+        ))
+
+    comparisons.sort(key=lambda c: c.correlation, reverse=True)
+    return comparisons

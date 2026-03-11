@@ -38,4 +38,15 @@ interface IFeeConcentrationIndex is IERC165, IHookFacet {
         external
         view
         returns (uint256 thetaSum_);
+
+    /// @notice Returns epoch-reset Δ⁺ for the pool, Q128-scaled.
+    /// @dev Accumulators reset each epoch (destruction by abandonment).
+    /// Returns current epoch's Δ⁺, or 0 if epoch expired with no new data.
+    function getDeltaPlusEpoch(PoolKey calldata key, bool reactive)
+        external
+        view
+        returns (uint128 deltaPlus_);
+
+    /// @notice Initialize epoch metric for a pool.
+    function initializeEpochPool(PoolKey calldata key, uint256 epochLengthSeconds) external;
 }

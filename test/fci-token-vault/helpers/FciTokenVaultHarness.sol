@@ -10,9 +10,16 @@ import {
     burnPair,
     getFciVaultStorage,
     FciVaultStorage,
+    VaultAlreadySettledPoke,
     LONG,
     SHORT
 } from "@fci-token-vault/modules/FciTokenVaultMod.sol";
+import {IFeeConcentrationIndex} from "@fee-concentration-index/interfaces/IFeeConcentrationIndex.sol";
+import {
+    applyDecay,
+    updateHWM,
+    deltaPlusToSqrtPriceX96
+} from "@fci-token-vault/libraries/SqrtPriceLookbackPayoffX96Lib.sol";
 
 import {
     getERC6909Storage,
@@ -49,6 +56,26 @@ contract FciTokenVaultHarness {
 
     function harness_poke() external {
         poke();
+    }
+
+    /// @dev Same as poke() but reads getDeltaPlusEpoch() instead of getDeltaPlus().
+    function harness_pokeEpoch() external {
+        FciVaultStorage storage vs = getFciVaultStorage();
+        if (vs.settled) revert VaultAlreadySettledPoke();
+
+        uint128 deltaPlus = IFeeConcentrationIndex(address(vs.poolKey.hooks))
+            .getDeltaPlusEpoch(vs.poolKey, vs.reactive);
+
+        uint256 dt = block.timestamp - vs.lastHwmTimestamp;
+        uint160 decayed = applyDecay(vs.sqrtPriceHWM, dt, vs.halfLifeSeconds);
+
+        if (deltaPlus > 0) {
+            uint160 currentSqrtPrice = deltaPlusToSqrtPriceX96(deltaPlus);
+            vs.sqrtPriceHWM = updateHWM(decayed, currentSqrtPrice);
+        } else {
+            vs.sqrtPriceHWM = decayed;
+        }
+        vs.lastHwmTimestamp = block.timestamp;
     }
 
     function harness_balanceOf(address owner, uint256 id) external view returns (uint256) {

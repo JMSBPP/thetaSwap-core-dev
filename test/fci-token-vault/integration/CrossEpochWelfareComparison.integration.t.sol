@@ -26,7 +26,7 @@ import {executeSwapWithAmount} from "@foundry-script/simulation/JitGame.sol";
 import "@foundry-script/utils/Constants.sol";
 
 import {FciTokenVaultHarness} from "../helpers/FciTokenVaultHarness.sol";
-import {LONG, SHORT} from "@fci-token-vault/modules/FciTokenVaultMod.sol";
+import {LONG, SHORT} from "@fci-token-vault/modules/CollateralCustodianMod.sol";
 
 contract CrossEpochWelfareComparisonTest is PosmTestSetup, FCITestHelper {
     using PoolIdLibrary for PoolKey;

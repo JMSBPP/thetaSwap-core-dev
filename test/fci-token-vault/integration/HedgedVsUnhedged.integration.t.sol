@@ -25,7 +25,7 @@ import {executeSwapWithAmount} from "@foundry-script/simulation/JitGame.sol";
 import "@foundry-script/utils/Constants.sol";
 
 import {FciTokenVaultHarness} from "../helpers/FciTokenVaultHarness.sol";
-import {LONG, SHORT} from "@fci-token-vault/modules/FciTokenVaultMod.sol";
+import {LONG, SHORT} from "@fci-token-vault/modules/CollateralCustodianMod.sol";
 import {lookbackPayoffX96, applyDecay} from "@fci-token-vault/libraries/SqrtPriceLookbackPayoffX96Lib.sol";
 
 contract HedgedVsUnhedgedTest is PosmTestSetup, FCITestHelper {
@@ -53,6 +53,8 @@ contract HedgedVsUnhedgedTest is PosmTestSetup, FCITestHelper {
     uint256 jitLpPk;
     address swapperAddr;
     uint256 swapperPk;
+    address depositorAddr;
+    uint256 depositorPk;
 
     function setUp() public {
         // Deploy V4 infrastructure
@@ -123,12 +125,15 @@ contract HedgedVsUnhedgedTest is PosmTestSetup, FCITestHelper {
         jitLpAddr = w.addr; jitLpPk = w.privateKey;
         w = vm.createWallet("swapper");
         swapperAddr = w.addr; swapperPk = w.privateKey;
+        w = vm.createWallet("depositor");
+        depositorAddr = w.addr; depositorPk = w.privateKey;
 
         // Fund and approve all actors
         _setupLP(hedgedPlpAddr);
         _setupLP(unhedgedPlpAddr);
         _setupLP(jitLpAddr);
         _setupSwapper(swapperAddr);
+        seedBalance(depositorAddr);
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -210,7 +215,8 @@ contract HedgedVsUnhedgedTest is PosmTestSetup, FCITestHelper {
         vault.harness_poke();
     }
 
-    function _settleAndRedeem(FciTokenVaultHarness v, address plpAddr, uint256 depositAmount)
+    /// @dev Settle vault and compute longPayout. Depositor redeems (holds both LONG+SHORT).
+    function _settleVault(FciTokenVaultHarness v, uint256 depositAmount)
         internal
         returns (uint256 longPayout, uint256 shortPayout)
     {
@@ -220,8 +226,8 @@ contract HedgedVsUnhedgedTest is PosmTestSetup, FCITestHelper {
         (,,,,,,, uint256 longPayoutPerToken) = v.harness_getVaultStorage();
         longPayout = (depositAmount * longPayoutPerToken) / SqrtPriceLibrary.Q96;
         shortPayout = depositAmount - longPayout;
-        vm.prank(plpAddr);
-        v.harness_redeem(plpAddr, depositAmount);
+        vm.prank(depositorAddr);
+        v.harness_redeem(depositorAddr, depositAmount);
     }
 
     /// @dev Measure cumulative welfare: token balances after all rounds vs before any LP activity
@@ -235,33 +241,33 @@ contract HedgedVsUnhedgedTest is PosmTestSetup, FCITestHelper {
     // ═══════════════════════════════════════════════════════════
 
     function test_equilibrium_no_jit() public {
-        _depositToVault(hedgedPlpAddr, HEDGE_AMOUNT);
-        uint256 hedgedLiq = CAPITAL - HEDGE_AMOUNT;
+        // Depositor funds vault (separate from PLPs)
+        _depositToVault(depositorAddr, HEDGE_AMOUNT);
 
         // Snapshot balances BEFORE LP rounds
         (uint256 hA0, uint256 hB0) = _snapshotBal(hedgedPlpAddr);
         (uint256 uA0, uint256 uB0) = _snapshotBal(unhedgedPlpAddr);
 
+        // Both PLPs provide equal CAPITAL
         for (uint256 i; i < ROUNDS; ++i) {
-            _runRound(false, 0, hedgedLiq, CAPITAL);
+            _runRound(false, 0, CAPITAL, CAPITAL);
         }
 
         // Snapshot balances AFTER all rounds (LPs already exited in _runRound)
         (uint256 hA1, uint256 hB1) = _snapshotBal(hedgedPlpAddr);
         (uint256 uA1, uint256 uB1) = _snapshotBal(unhedgedPlpAddr);
 
-        // Net gain from LP activity (can be negative due to IL, but sum both tokens)
         uint256 hedgedPayout = (hA1 + hB1) - (hA0 + hB0);
         uint256 unhedgedPayout = (uA1 + uB1) - (uA0 + uB0);
 
-        (uint256 longPayout, uint256 shortPayout) = _settleAndRedeem(vault, hedgedPlpAddr, HEDGE_AMOUNT);
+        (uint256 longPayout, uint256 shortPayout) = _settleVault(vault, HEDGE_AMOUNT);
 
         uint256 hedgedWelfare = hedgedPayout + longPayout;
         uint256 unhedgedWelfare = unhedgedPayout;
 
-        // Property 2: No false trigger
+        // Property 2: No false trigger — equal capital, no JIT → equal welfare
         assertEq(longPayout, 0, "LONG should be 0 in equilibrium");
-        assertLt(hedgedWelfare, unhedgedWelfare, "hedged should earn less in equilibrium");
+        assertEq(hedgedWelfare, unhedgedWelfare, "equal capital + no JIT = equal welfare");
 
         // Property 3: Vault solvency
         assertEq(longPayout + shortPayout, HEDGE_AMOUNT, "conservation: long + short = deposit");
@@ -279,14 +285,15 @@ contract HedgedVsUnhedgedTest is PosmTestSetup, FCITestHelper {
     // ═══════════════════════════════════════════════════════════
 
     function test_jit_crowdout_hedge_compensates() public {
-        _depositToVault(hedgedPlpAddr, HEDGE_AMOUNT);
-        uint256 hedgedLiq = CAPITAL - HEDGE_AMOUNT;
+        // Depositor funds vault (separate from PLPs)
+        _depositToVault(depositorAddr, HEDGE_AMOUNT);
 
         (uint256 hA0, uint256 hB0) = _snapshotBal(hedgedPlpAddr);
         (uint256 uA0, uint256 uB0) = _snapshotBal(unhedgedPlpAddr);
 
+        // Both PLPs provide equal CAPITAL
         for (uint256 i; i < ROUNDS; ++i) {
-            _runRound(true, JIT_CAPITAL, hedgedLiq, CAPITAL);
+            _runRound(true, JIT_CAPITAL, CAPITAL, CAPITAL);
 
             // Property 4: HWM captures current price after each poke
             (,uint160 sqrtPriceHWM,,,,,,) = vault.harness_getVaultStorage();
@@ -301,12 +308,14 @@ contract HedgedVsUnhedgedTest is PosmTestSetup, FCITestHelper {
         uint256 hedgedPayout = (hA1 + hB1) - (hA0 + hB0);
         uint256 unhedgedPayout = (uA1 + uB1) - (uA0 + uB0);
 
-        (uint256 longPayout, uint256 shortPayout) = _settleAndRedeem(vault, hedgedPlpAddr, HEDGE_AMOUNT);
+        (uint256 longPayout, uint256 shortPayout) = _settleVault(vault, HEDGE_AMOUNT);
 
+        // Both PLPs earn identical LP returns (equal capital, same pool)
+        // Hedged PLP additionally receives longPayout from the insurance mechanism
         uint256 hedgedWelfare = hedgedPayout + longPayout;
         uint256 unhedgedWelfare = unhedgedPayout;
 
-        // Property 1: Payoff compensation
+        // Property 1: Payoff compensation — longPayout makes hedged > unhedged
         assertGt(hedgedWelfare, unhedgedWelfare, "hedged should earn more under JIT crowd-out");
         assertGt(longPayout, 0, "LONG should be positive under JIT crowd-out");
 
@@ -319,7 +328,6 @@ contract HedgedVsUnhedgedTest is PosmTestSetup, FCITestHelper {
         uint160 decayedHWM = applyDecay(hwmBeforeSettle, dt, halfLife);
         assertLt(uint256(decayedHWM), uint256(hwmBeforeSettle), "decay should reduce HWM");
 
-        // Property 6: Log break-even metrics
         console.log("=== JIT CROWD-OUT ===");
         console.log("Hedged payout:", hedgedPayout);
         console.log("Unhedged payout:", unhedgedPayout);
@@ -343,20 +351,20 @@ contract HedgedVsUnhedgedTest is PosmTestSetup, FCITestHelper {
             highStrike, 14 days, block.timestamp + 5 days,
             key, false, Currency.unwrap(currency1)
         );
-        vm.startPrank(hedgedPlpAddr);
+        // Depositor funds the high-strike vault
+        vm.startPrank(depositorAddr);
         IERC20(Currency.unwrap(currency1)).approve(address(highStrikeVault), HEDGE_AMOUNT);
-        highStrikeVault.harness_deposit(hedgedPlpAddr, HEDGE_AMOUNT);
+        highStrikeVault.harness_deposit(depositorAddr, HEDGE_AMOUNT);
         vm.stopPrank();
 
-        uint256 hedgedLiq = CAPITAL - HEDGE_AMOUNT;
         uint256 smallJitCapital = CAPITAL / 10;
 
         (uint256 hA0, uint256 hB0) = _snapshotBal(hedgedPlpAddr);
         (uint256 uA0, uint256 uB0) = _snapshotBal(unhedgedPlpAddr);
 
         for (uint256 i; i < ROUNDS; ++i) {
-            // Manual round using highStrikeVault for poke
-            uint256 hTid = mintPosition(ctx, scenario, Protocol.UniswapV4, hedgedPlpPk, hedgedLiq);
+            // Manual round using highStrikeVault for poke — both PLPs provide equal CAPITAL
+            uint256 hTid = mintPosition(ctx, scenario, Protocol.UniswapV4, hedgedPlpPk, CAPITAL);
             uint256 uTid = mintPosition(ctx, scenario, Protocol.UniswapV4, unhedgedPlpPk, CAPITAL);
             vm.roll(block.number + JIT_ENTRY_OFFSET);
             uint256 jTid = mintPosition(ctx, scenario, Protocol.UniswapV4, jitLpPk, smallJitCapital);
@@ -364,7 +372,7 @@ contract HedgedVsUnhedgedTest is PosmTestSetup, FCITestHelper {
             vm.roll(block.number + 1);
             burnPosition(ctx, Protocol.UniswapV4, jitLpPk, jTid, smallJitCapital);
             vm.roll(block.number + PASSIVE_EXIT_OFFSET);
-            burnPosition(ctx, Protocol.UniswapV4, hedgedPlpPk, hTid, hedgedLiq);
+            burnPosition(ctx, Protocol.UniswapV4, hedgedPlpPk, hTid, CAPITAL);
             burnPosition(ctx, Protocol.UniswapV4, unhedgedPlpPk, uTid, CAPITAL);
             vm.warp(block.timestamp + ROUND_INTERVAL);
             highStrikeVault.harness_poke();
@@ -375,14 +383,14 @@ contract HedgedVsUnhedgedTest is PosmTestSetup, FCITestHelper {
         uint256 hedgedPayout = (hA1 + hB1) - (hA0 + hB0);
         uint256 unhedgedPayout = (uA1 + uB1) - (uA0 + uB0);
 
-        (uint256 longPayout, uint256 shortPayout) = _settleAndRedeem(highStrikeVault, hedgedPlpAddr, HEDGE_AMOUNT);
+        (uint256 longPayout, uint256 shortPayout) = _settleVault(highStrikeVault, HEDGE_AMOUNT);
 
         uint256 hedgedWelfare = hedgedPayout + longPayout;
         uint256 unhedgedWelfare = unhedgedPayout;
 
-        // Property 2: No false trigger
+        // Property 2: No false trigger — equal capital, below strike → equal welfare
         assertEq(longPayout, 0, "LONG should be 0 when below strike");
-        assertLt(hedgedWelfare, unhedgedWelfare, "hedged should earn less when below strike");
+        assertEq(hedgedWelfare, unhedgedWelfare, "equal capital + below strike = equal welfare");
 
         // Property 3: Vault solvency
         assertEq(longPayout + shortPayout, HEDGE_AMOUNT, "conservation: long + short = deposit");

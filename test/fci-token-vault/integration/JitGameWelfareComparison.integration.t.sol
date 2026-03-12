@@ -36,7 +36,7 @@ import {
 import "@foundry-script/utils/Constants.sol";
 
 import {FciTokenVaultHarness} from "../helpers/FciTokenVaultHarness.sol";
-import {LONG, SHORT} from "@fci-token-vault/modules/FciTokenVaultMod.sol";
+import {LONG, SHORT} from "@fci-token-vault/modules/CollateralCustodianMod.sol";
 import {SwapParams} from "v4-core/src/types/PoolOperation.sol";
 import {PoolSwapTest} from "v4-core/src/test/PoolSwapTest.sol";
 import {TickMath} from "v4-core/src/libraries/TickMath.sol";

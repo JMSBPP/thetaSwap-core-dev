@@ -13,11 +13,39 @@ import {PoolSwapTest} from "v4-core/src/test/PoolSwapTest.sol";
 import {V3CallbackRouter} from "@reactive-integration/adapters/uniswapV3/V3CallbackRouter.sol";
 import {Currency} from "v4-core/src/types/Currency.sol";
 import {PoolId, PoolIdLibrary} from "v4-core/src/types/PoolId.sol";
+import {IFeeConcentrationIndex} from "@fee-concentration-index/interfaces/IFeeConcentrationIndex.sol";
 import "@foundry-script/utils/Constants.sol";
 
 /// @dev Minimal interface to read delta-plus from FCI hook (harness or production).
 interface IFCIDeltaPlusReader {
     function getDeltaPlus(PoolId poolId) external view returns (uint128);
+}
+
+/// @dev Minimal interface for vault operations in the game loop.
+/// Uses harness function names -- the game library is test infrastructure.
+interface IVaultPokeSettle {
+    function harness_pokeEpoch() external;
+    function harness_settle() external;
+    /// @return sqrtPriceStrike, sqrtPriceHWM, halfLifeSeconds, expiry,
+    ///         totalDeposits, lastHwmTimestamp, settled, longPayoutPerToken
+    function harness_getVaultStorage() external view returns (
+        uint160, uint160, uint256, uint256, uint256, uint256, bool, uint256
+    );
+}
+
+struct VaultConfig {
+    address vault;          // zero address = no vault
+    uint256 depositAmount;  // lump-sum hedge deposit
+    bool reactive;          // reactive flag for getDeltaPlusEpoch reads
+}
+
+struct WelfareResult {
+    uint256 longPayout;       // vault settlement payout to LONG
+    uint256 shortPayout;      // vault settlement payout to SHORT
+    int256  hedgeValue;       // int256(longPayout) - int256(depositAmount)
+    uint256 lpFeeRevenue;     // sum of hedgedLpPayout across all rounds
+    uint256 hedgedWelfare;    // lpFeeRevenue + longPayout
+    uint256 unhedgedWelfare;  // lpFeeRevenue (no vault interaction)
 }
 
 struct JitGameConfig {
@@ -216,6 +244,7 @@ struct MultiRoundJitGameResult {
     uint256 finalHedgedLpPayout;
     uint256 finalUnhedgedLpPayout;
     uint256 totalJitLpPayout;
+    WelfareResult welfare;
 }
 
 function runMultiRoundJitGame(

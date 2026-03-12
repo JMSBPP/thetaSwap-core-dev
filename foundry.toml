@@ -34,6 +34,7 @@ remappings = [
     "compose/=lib/hook-bazaar/contracts/lib/Compose/src/",
     "@fee-concentration-index/=src/fee-concentration-index/",
     "@reactive-integration/=src/reactive-integration/",
+    "@protocol-adapter/=src/reactive-integration/template/",
     "@theta-swap-insurance/=src/theta-swap-insurance/",
     "@types/=src/types/",
     "@libraries/=src/libraries/",

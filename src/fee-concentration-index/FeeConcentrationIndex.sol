@@ -35,6 +35,10 @@ import {SwapCount} from "typed-uniswap-v4/fee-concentration-index/types/SwapCoun
 import {BlockCount} from "typed-uniswap-v4/fee-concentration-index/types/BlockCountMod.sol";
 import {IFeeConcentrationIndex} from "./interfaces/IFeeConcentrationIndex.sol";
 import {IERC165} from "forge-std/interfaces/IERC165.sol";
+import {
+    FeeConcentrationEpochStorage, epochFciStorage,
+    addEpochTerm, epochDeltaPlus, initializeEpoch
+} from "./modules/FeeConcentrationEpochStorageMod.sol";
 
 // Fee Concentration Index — HookFacet (no BaseHook, no inheritance beyond interfaces).
 // Deployed as a facet in MasterHook diamond — runs via delegatecall.
@@ -163,6 +167,7 @@ contract FeeConcentrationIndex {
         if (!swapLifetime.isZero()) {
             uint256 xSquaredQ128 = xk.square();
             addStateTerm(hookData, poolId, blockLifetime, xSquaredQ128);
+            addEpochTerm(poolId, blockLifetime, xSquaredQ128);
         }
         decrementPosCount(hookData, poolId);
         deleteFeeGrowthBaseline(hookData, poolId, positionKey);
@@ -193,6 +198,18 @@ contract FeeConcentrationIndex {
     function getThetaSum(PoolKey calldata key, bool reactive) external view returns (uint256 thetaSum_) {
         FeeConcentrationIndexStorage storage $ = reactive ? reactiveFciStorage() : fciStorage();
         thetaSum_ = $.fciState[PoolIdLibrary.toId(key)].thetaSum;
+    }
+
+    function getDeltaPlusEpoch(PoolKey calldata key, bool reactive) external view returns (uint128 deltaPlus_) {
+        // TODO(chunk-3): reactive ? reactiveEpochFciStorage() : epochFciStorage()
+        deltaPlus_ = epochDeltaPlus(PoolIdLibrary.toId(key));
+    }
+
+    /// @notice Initialize epoch metric for a pool. Must be called before epoch accumulation begins.
+    /// @param key The pool key.
+    /// @param epochLengthSeconds Epoch duration in seconds (e.g. 86400 for 1 day).
+    function initializeEpochPool(PoolKey calldata key, uint256 epochLengthSeconds) external {
+        initializeEpoch(PoolIdLibrary.toId(key), epochLengthSeconds);
     }
 
     // ── IERC165 ──

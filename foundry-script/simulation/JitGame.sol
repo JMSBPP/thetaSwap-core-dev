@@ -13,6 +13,7 @@ import {PoolSwapTest} from "v4-core/src/test/PoolSwapTest.sol";
 import {V3CallbackRouter} from "@reactive-integration/adapters/uniswapV3/V3CallbackRouter.sol";
 import {Currency} from "v4-core/src/types/Currency.sol";
 import {PoolId, PoolIdLibrary} from "v4-core/src/types/PoolId.sol";
+import {console} from "forge-std/console.sol";
 import {IFeeConcentrationIndex} from "@fee-concentration-index/interfaces/IFeeConcentrationIndex.sol";
 import "@foundry-script/utils/Constants.sol";
 
@@ -269,6 +270,86 @@ function runMultiRoundJitGame(
         if (r == cfg.rounds - 1) {
             result.finalHedgedLpPayout = roundResult.hedgedLpPayout;
             result.finalUnhedgedLpPayout = roundResult.unhedgedLpPayout;
+        }
+    }
+}
+
+/// @dev Multi-round game with deterministic JIT schedule and optional vault.
+/// jitSchedule[r] = true forces JIT entry in round r, false forces no JIT.
+/// When vault is configured (non-zero address), pokes epoch vault after burns
+/// and before warp (poke-before-warp ordering), then settles after all rounds.
+function runMultiRoundJitGameWithSchedule(
+    Context storage ctx,
+    Scenario storage s,
+    MultiRoundJitGameConfig memory cfg,
+    JitAccounts memory acc,
+    address fciHook,
+    VaultConfig memory vaultCfg,
+    bool[] memory jitSchedule
+) returns (MultiRoundJitGameResult memory result) {
+    require(cfg.rounds > 0, "MultiRound: rounds must be > 0");
+    require(jitSchedule.length == cfg.rounds, "MultiRound: schedule length mismatch");
+    validateJitConfig(cfg.roundConfig);
+
+    result.deltaPlusPerRound = new uint128[](cfg.rounds);
+    uint256 totalHedgedLpFees;
+
+    for (uint256 r; r < cfg.rounds; ++r) {
+        // Override probability for deterministic scheduling
+        cfg.roundConfig.jitEntryProbability = jitSchedule[r] ? 10000 : 0;
+
+        JitGameResult memory roundResult = runJitGame(ctx, s, cfg.roundConfig, acc, fciHook);
+
+        result.deltaPlusPerRound[r] = roundResult.deltaPlus;
+        result.totalJitLpPayout += roundResult.jitLpPayout;
+        totalHedgedLpFees += roundResult.hedgedLpPayout;
+
+        if (r == cfg.rounds - 1) {
+            result.finalHedgedLpPayout = roundResult.hedgedLpPayout;
+            result.finalUnhedgedLpPayout = roundResult.unhedgedLpPayout;
+        }
+
+        // Vault poke: BEFORE warp (critical for epoch metric)
+        if (vaultCfg.vault != address(0)) {
+            uint128 epochDp = IFeeConcentrationIndex(fciHook)
+                .getDeltaPlusEpoch(ctx.v4Pool, vaultCfg.reactive);
+            console.log("  Round", r + 1);
+            console.log("    JIT:", jitSchedule[r] ? "YES" : "NO ");
+            console.log("    epochDp:", uint256(epochDp));
+            console.log("    fees:", roundResult.hedgedLpPayout);
+
+            IVaultPokeSettle(vaultCfg.vault).harness_pokeEpoch();
+        }
+
+        // Warp to next epoch
+        ctx.vm.warp(block.timestamp + 1 days);
+    }
+
+    // Settlement
+    if (vaultCfg.vault != address(0)) {
+        (,,, uint256 expiry,,,,) = IVaultPokeSettle(vaultCfg.vault).harness_getVaultStorage();
+        ctx.vm.warp(expiry + 1);
+        IVaultPokeSettle(vaultCfg.vault).harness_settle();
+
+        (,,,,,,, uint256 longPayoutPerToken) = IVaultPokeSettle(vaultCfg.vault).harness_getVaultStorage();
+        result.welfare.longPayout = (vaultCfg.depositAmount * longPayoutPerToken) / (2 ** 96);
+        result.welfare.shortPayout = vaultCfg.depositAmount - result.welfare.longPayout;
+        result.welfare.hedgeValue = int256(result.welfare.longPayout) - int256(vaultCfg.depositAmount);
+        result.welfare.lpFeeRevenue = totalHedgedLpFees;
+        result.welfare.hedgedWelfare = totalHedgedLpFees + result.welfare.longPayout;
+        result.welfare.unhedgedWelfare = totalHedgedLpFees;
+
+        // Narrative summary
+        console.log("  ---");
+        console.log("  LONG payout:      ", result.welfare.longPayout);
+        console.log("  Hedge deposit:    ", vaultCfg.depositAmount);
+        console.log("  LP fee revenue:   ", result.welfare.lpFeeRevenue);
+        console.log("  Hedged welfare:   ", result.welfare.hedgedWelfare);
+        console.log("  Unhedged welfare: ", result.welfare.unhedgedWelfare);
+        if (result.welfare.hedgedWelfare > result.welfare.unhedgedWelfare) {
+            console.log("  VERDICT: HEDGE PROFITABLE");
+        } else {
+            console.log("  VERDICT: HEDGE UNPROFITABLE");
         }
     }
 }

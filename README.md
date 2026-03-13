@@ -1,8 +1,12 @@
 <p align="center">
-  <img src="assets/logo/thetaswap-hero-dark.svg" width="80" alt="thetaswap" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo/thetaswap-hero-dark.svg" />
+    <source media="(prefers-color-scheme: light)" srcset="assets/logo/thetaswap-hero-mono.svg" />
+    <img src="assets/logo/thetaswap-hero-dark.svg" width="200" alt="thetaswap" />
+  </picture>
 </p>
 
-<h3 align="center">thetaswap</h3>
+<h2 align="center">thetaswap</h2>
 
 <p align="center">
   Fee concentration insurance for Uniswap V4 passive LPs

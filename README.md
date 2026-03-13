@@ -1,6 +1,18 @@
-# ThetaSwap Core
+<p align="center">
+  <img src="assets/logo/thetaswap-hero-dark.svg" width="80" alt="thetaswap" />
+</p>
 
-Fee concentration insurance protocol for Uniswap V4 passive LPs.
+<h3 align="center">thetaswap</h3>
+
+<p align="center">
+  Fee concentration insurance for Uniswap V4 passive LPs
+</p>
+
+<p align="center">
+  <a href="#solidity-fee-concentration-index">Contracts</a> · <a href="#python-econometrics--backtest">Research</a> · <a href="app/">Frontend</a>
+</p>
+
+---
 
 ## Prerequisites
 

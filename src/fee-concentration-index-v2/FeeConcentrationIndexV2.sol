@@ -26,7 +26,7 @@ import {
 } from "@fee-concentration-index-v2/modules/FCIProtocolFacetStorageMod.sol";
 import {sortTicks} from "@libraries/HookUtilsMod.sol";
 import {LibCall} from "solady/utils/LibCall.sol";
-import {requireOwner} from "@fee-concentration-index-v2/modules/dependencies/LibOwner.sol";
+import {requireOwner, initOwner} from "@fee-concentration-index-v2/modules/dependencies/LibOwner.sol";
 import {LiquidityPositionSnapshot} from "@fee-concentration-index-v2/types/LiquidityPositionSnapshot.sol";
 import {PositionConfig} from "@uniswap/v4-periphery/src/libraries/PositionConfig.sol";
 
@@ -295,6 +295,12 @@ contract FeeConcentrationIndexV2 {
     function getDeltaPlusEpoch(PoolKey calldata key, bytes2 flags) external view returns (uint128 deltaPlus_) {
         FeeConcentrationEpochStorage storage $ = protocolEpochFciStorage(flags);
         deltaPlus_ = $.epochStates[PoolIdLibrary.toId(key)][$.currentEpochId[PoolIdLibrary.toId(key)]].deltaPlus();
+    }
+
+    // ── Initialization ──
+
+    function initialize(address _owner) external {
+        initOwner(_owner);
     }
 
     // ── Registration ──

@@ -36,6 +36,15 @@ function requireOwner() view {
     }
 }
 
+error AlreadyInitialized();
+
+function initOwner(address _owner) {
+    OwnerStorage storage s = getStorage();
+    if (s.owner != address(0)) revert AlreadyInitialized();
+    s.owner = _owner;
+    emit OwnershipTransferred(address(0), _owner);
+}
+
 function transferOwnership(address _newOwner) {
     OwnerStorage storage s = getStorage();
     address previousOwner = s.owner;

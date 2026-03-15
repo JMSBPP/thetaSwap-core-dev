@@ -29,7 +29,7 @@ import {
     tloadRemovalData as _tloadRemovalData
 } from "@fee-concentration-index-v2/modules/FCIProtocolFacetStorageMod.sol";
 import {FeeConcentrationEpochStorage} from "@fee-concentration-index/modules/FeeConcentrationEpochStorageMod.sol";
-import {requireOwner} from "@fee-concentration-index-v2/modules/dependencies/LibOwner.sol";
+import {requireOwner, initOwner} from "@fee-concentration-index-v2/modules/dependencies/LibOwner.sol";
 
 /// @title NativeUniswapV4Facet
 /// @dev Protocol facet for Uniswap V4 native hooks.
@@ -53,6 +53,12 @@ contract NativeUniswapV4Facet {
     // ── Admin (direct call, NOT delegatecall) ──
 
     event PoolAdded(address indexed facet, address indexed callback, PoolId indexed poolId, bytes2 protocolFlag);
+
+    /// @notice Initialize the facet — sets owner and PoolManager in one call.
+    function initialize(address _owner, IProtocolStateView _protocolStateView) external {
+        initOwner(_owner);
+        _setProtocolStateView(NATIVE_V4, _protocolStateView);
+    }
     error PoolAlreadyInitialized(PoolId poolId);
 
     /// @notice Register and initialize a V4 pool for FCI tracking.

@@ -8,6 +8,7 @@ import {IProtocolStateView} from "@protocol-adapter/interfaces/IProtocolStateVie
 /// @dev Called directly on the facet contract (NOT via delegatecall from FCI).
 /// Separated from IFCIProtocolFacet to prevent mixing call contexts.
 interface IFCIProtocolAdmin {
+    function initialize(address _owner, IProtocolStateView _protocolStateView) external;
     function listen(bytes calldata poolRpt) payable external returns (PoolKey memory poolKey);
     function setProtocolStateView(IProtocolStateView stateView) external;
 }

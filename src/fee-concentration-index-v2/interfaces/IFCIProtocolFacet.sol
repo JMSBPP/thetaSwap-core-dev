@@ -44,6 +44,9 @@ interface IFCIProtocolFacet is IHooks {
     function tstoreRemovalData(bytes calldata hookData, uint256 feeLast, uint128 posLiquidity, uint256 rangeFeeGrowth) external;
     function tloadRemovalData(bytes calldata hookData) external view returns (uint256 feeLast, uint128 posLiquidity, uint256 rangeFeeGrowth);
 
+    // ── Overlapping ranges ──
+    function incrementOverlappingRanges(bytes calldata hookData, PoolId poolId, int24 tickMin, int24 tickMax) external;
+
     // ── FCI state accumulation ──
     function addStateTerm(bytes calldata hookData, PoolId poolId, BlockCount blockLifetime, uint256 xSquaredQ128) external;
     function addEpochTerm(bytes calldata hookData, PoolId poolId, BlockCount blockLifetime, uint256 xSquaredQ128) external;

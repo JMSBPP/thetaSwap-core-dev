@@ -103,6 +103,12 @@ contract NativeUniswapV4Facet {
         // TODO: transient load via FCIProtocolFacetStorageMod
     }
 
+    // ── Overlapping ranges ──
+
+    function incrementOverlappingRanges(bytes calldata hookData, PoolId poolId, int24 tickMin, int24 tickMax) external onlyDelegateCall {
+        // TODO: iterate V2 registry ranges, check intersects, increment swap count
+    }
+
     // ── FCI state accumulation ──
 
     function addStateTerm(bytes calldata hookData, PoolId poolId, BlockCount blockLifetime, uint256 xSquaredQ128) external onlyDelegateCall {

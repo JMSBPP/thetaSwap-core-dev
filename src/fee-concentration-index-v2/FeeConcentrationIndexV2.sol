@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {IHooks} from "v4-core/src/interfaces/IHooks.sol";
 import {PoolKey} from "v4-core/src/types/PoolKey.sol";
 import {PoolId, PoolIdLibrary} from "v4-core/src/types/PoolId.sol";
 import {BalanceDelta} from "v4-core/src/types/BalanceDelta.sol";
-import {BeforeSwapDelta} from "v4-core/src/types/BeforeSwapDelta.sol";
+import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "v4-core/src/types/BeforeSwapDelta.sol";
 import {SwapParams, ModifyLiquidityParams} from "v4-core/src/types/PoolOperation.sol";
+import {TickRange, fromTicksPacked} from "typed-uniswap-v4/types/TickRangeMod.sol";
+import {SwapCount} from "typed-uniswap-v4/types/SwapCountMod.sol";
+import {BlockCount} from "typed-uniswap-v4/types/BlockCountMod.sol";
+import {FeeShareRatio, fromFeeGrowthDelta} from "typed-uniswap-v4/types/FeeShareRatioMod.sol";
 import {IFeeConcentrationIndex} from "@fee-concentration-index/interfaces/IFeeConcentrationIndex.sol";
 import {IERC165} from "forge-std/interfaces/IERC165.sol";
+import {FeeConcentrationEpochStorage} from "@fee-concentration-index/modules/FeeConcentrationEpochStorageMod.sol";
 import {
     fciRegistryStorage, getProtocolFacet, setProtocolFacet
 } from "@fee-concentration-index-v2/modules/FeeConcentrationIndexRegistryStorageMod.sol";
@@ -19,29 +25,73 @@ import {
     protocolFciStorage, protocolEpochFciStorage
 } from "@fee-concentration-index-v2/modules/FCIProtocolFacetStorageMod.sol";
 import {getProtocolFlagFromHookData} from "@fee-concentration-index-v2/libraries/FCIProtocolLib.sol";
+import {sortTicks} from "@libraries/HookUtilsMod.sol";
 import {LibCall} from "solady/utils/LibCall.sol";
-import {FeeConcentrationEpochStorage} from "@fee-concentration-index/modules/FeeConcentrationEpochStorageMod.sol";
+import {LiquidityPositionSnapshot} from "@fee-concentration-index-v2/types/LiquidityPositionSnapshot.sol";
+import {PositionConfig} from "@uniswap/v4-periphery/src/libraries/PositionConfig.sol";
 
-// Fee Concentration Index V2 — Protocol-agnostic dispatcher.
-// All hook calls are delegated to registered protocol facets.
+// Fee Concentration Index V2 — Protocol-agnostic orchestrator.
+// Hook flow (algorithm) lives here. Protocol-specific behavior is delegatecalled
+// per function to the registered facet via IFCIProtocolFacet.
 // NATIVE_V4 (0xFFFF) is a registered facet like any other protocol.
-// Empty hookData → getProtocolFlagFromHookData returns NATIVE_V4.
 
 contract FeeConcentrationIndexV2 {
 
     // ── afterAddLiquidity ──
 
     function afterAddLiquidity(
-        address,
-        PoolKey calldata,
-        ModifyLiquidityParams calldata,
+        address sender,
+        PoolKey calldata key,
+        ModifyLiquidityParams calldata params,
         BalanceDelta,
         BalanceDelta,
         bytes calldata hookData
     ) external virtual returns (bytes4, BalanceDelta) {
         bytes2 protocolFlags = getProtocolFlagFromHookData(hookData);
-        bytes memory ret = LibCall.delegateCallContract(address(getProtocolFacet(protocolFlags)), msg.data);
-        return abi.decode(ret, (bytes4, BalanceDelta));
+        address facet = address(getProtocolFacet(protocolFlags));
+        PoolId poolId = PoolIdLibrary.toId(key);
+
+        // 1. positionKey
+        bytes32 posKey = abi.decode(
+            LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.positionKey, (hookData, sender, params))),
+            (bytes32)
+        );
+
+        // 2. latestPositionFeeGrowthInside
+        (uint128 posLiquidity,) = abi.decode(
+            LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.latestPositionFeeGrowthInside, (hookData, poolId, posKey))),
+            (uint128, uint256)
+        );
+
+        // 3. addPositionInRange
+        TickRange rk = fromTicksPacked(params.tickLower, params.tickUpper);
+        LiquidityPositionSnapshot memory snapshot = LiquidityPositionSnapshot({
+            config: PositionConfig({poolKey: key, tickLower: params.tickLower, tickUpper: params.tickUpper}),
+            liquidity: posLiquidity,
+            feeGrowthInside0LastX128: 0,
+            feeGrowthInside1LastX128: 0
+        });
+        LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.addPositionInRange, (hookData, posKey, snapshot)));
+
+        // 4. currentTick
+        int24 tick = abi.decode(
+            LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.currentTick, (hookData))),
+            (int24)
+        );
+
+        // 5. poolRangeFeeGrowthInside
+        uint256 feeGrowthInside0X128 = abi.decode(
+            LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.poolRangeFeeGrowthInside, (hookData, poolId, tick, rk))),
+            (uint256)
+        );
+
+        // 6. setFeeGrowthBaseline
+        LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.setFeeGrowthBaseline, (hookData, poolId, posKey, feeGrowthInside0X128)));
+
+        // 7. incrementPosCount
+        LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.incrementPosCount, (hookData, poolId)));
+
+        return (IHooks.afterAddLiquidity.selector, BalanceDelta.wrap(0));
     }
 
     // ── beforeSwap ──
@@ -53,50 +103,167 @@ contract FeeConcentrationIndexV2 {
         bytes calldata hookData
     ) external virtual returns (bytes4, BeforeSwapDelta, uint24) {
         bytes2 protocolFlags = getProtocolFlagFromHookData(hookData);
-        bytes memory ret = LibCall.delegateCallContract(address(getProtocolFacet(protocolFlags)), msg.data);
-        return abi.decode(ret, (bytes4, BeforeSwapDelta, uint24));
+        address facet = address(getProtocolFacet(protocolFlags));
+
+        // 1. currentTick
+        int24 tick = abi.decode(
+            LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.currentTick, (hookData))),
+            (int24)
+        );
+
+        // 2. tstoreTick
+        LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.tstoreTick, (hookData, tick)));
+
+        return (IHooks.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
     }
 
     // ── afterSwap ──
 
     function afterSwap(
         address,
-        PoolKey calldata,
+        PoolKey calldata key,
         SwapParams calldata,
         BalanceDelta,
         bytes calldata hookData
     ) external virtual returns (bytes4, int128) {
         bytes2 protocolFlags = getProtocolFlagFromHookData(hookData);
-        bytes memory ret = LibCall.delegateCallContract(address(getProtocolFacet(protocolFlags)), msg.data);
-        return abi.decode(ret, (bytes4, int128));
+        address facet = address(getProtocolFacet(protocolFlags));
+        PoolId poolId = PoolIdLibrary.toId(key);
+
+        // 1. tloadTick (tickBefore)
+        int24 tickBefore = abi.decode(
+            LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.tloadTick, (hookData))),
+            (int24)
+        );
+
+        // 2. currentTick (tickAfter)
+        int24 tickAfter = abi.decode(
+            LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.currentTick, (hookData))),
+            (int24)
+        );
+
+        // 3. incrementOverlappingRanges
+        (int24 tickMin, int24 tickMax) = sortTicks(tickBefore, tickAfter);
+        LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.incrementOverlappingRanges, (hookData, poolId, tickMin, tickMax)));
+
+        return (IHooks.afterSwap.selector, 0);
     }
 
     // ── beforeRemoveLiquidity ──
 
     function beforeRemoveLiquidity(
-        address,
-        PoolKey calldata,
-        ModifyLiquidityParams calldata,
+        address sender,
+        PoolKey calldata key,
+        ModifyLiquidityParams calldata params,
         bytes calldata hookData
     ) external returns (bytes4) {
         bytes2 protocolFlags = getProtocolFlagFromHookData(hookData);
-        bytes memory ret = LibCall.delegateCallContract(address(getProtocolFacet(protocolFlags)), msg.data);
-        return abi.decode(ret, (bytes4));
+        address facet = address(getProtocolFacet(protocolFlags));
+        PoolId poolId = PoolIdLibrary.toId(key);
+
+        // 1. positionKey
+        bytes32 posKey = abi.decode(
+            LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.positionKey, (hookData, sender, params))),
+            (bytes32)
+        );
+
+        // 2. latestPositionFeeGrowthInside
+        (uint128 posLiquidity, uint256 feeLast0) = abi.decode(
+            LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.latestPositionFeeGrowthInside, (hookData, poolId, posKey))),
+            (uint128, uint256)
+        );
+
+        // 3. currentTick
+        int24 tick = abi.decode(
+            LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.currentTick, (hookData))),
+            (int24)
+        );
+
+        // 4. poolRangeFeeGrowthInside
+        TickRange rk = fromTicksPacked(params.tickLower, params.tickUpper);
+        uint256 rangeFeeGrowth0 = abi.decode(
+            LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.poolRangeFeeGrowthInside, (hookData, poolId, tick, rk))),
+            (uint256)
+        );
+
+        // 5. tstoreRemovalData
+        LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.tstoreRemovalData, (hookData, feeLast0, posLiquidity, rangeFeeGrowth0)));
+
+        return IHooks.beforeRemoveLiquidity.selector;
     }
 
     // ── afterRemoveLiquidity ──
 
     function afterRemoveLiquidity(
-        address,
-        PoolKey calldata,
-        ModifyLiquidityParams calldata,
+        address sender,
+        PoolKey calldata key,
+        ModifyLiquidityParams calldata params,
         BalanceDelta,
         BalanceDelta,
         bytes calldata hookData
     ) external virtual returns (bytes4, BalanceDelta) {
         bytes2 protocolFlags = getProtocolFlagFromHookData(hookData);
-        bytes memory ret = LibCall.delegateCallContract(address(getProtocolFacet(protocolFlags)), msg.data);
-        return abi.decode(ret, (bytes4, BalanceDelta));
+        address facet = address(getProtocolFacet(protocolFlags));
+        PoolId poolId = PoolIdLibrary.toId(key);
+
+        // 1. positionKey
+        bytes32 posKey = abi.decode(
+            LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.positionKey, (hookData, sender, params))),
+            (bytes32)
+        );
+
+        // 2. tloadRemovalData
+        (uint256 positionFeeLast0X128, uint128 posLiq, uint256 rangeFeeGrowthNow0X128) = abi.decode(
+            LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.tloadRemovalData, (hookData))),
+            (uint256, uint128, uint256)
+        );
+
+        // Partial remove guard — skip FCI accumulation if not full exit
+        uint128 removedLiq = uint128(uint256(-params.liquidityDelta));
+        if (posLiq != removedLiq) {
+            return (IHooks.afterRemoveLiquidity.selector, BalanceDelta.wrap(0));
+        }
+
+        // 3. getFeeGrowthBaseline
+        uint256 baseline0X128 = abi.decode(
+            LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.getFeeGrowthBaseline, (hookData, poolId, posKey))),
+            (uint256)
+        );
+
+        // 4. removePositionInRange
+        LiquidityPositionSnapshot memory snapshot = LiquidityPositionSnapshot({
+            config: PositionConfig({poolKey: key, tickLower: params.tickLower, tickUpper: params.tickUpper}),
+            liquidity: posLiq,
+            feeGrowthInside0LastX128: positionFeeLast0X128,
+            feeGrowthInside1LastX128: 0
+        });
+        (SwapCount swapLifetime, BlockCount blockLifetime, uint128 totalRangeLiq) = abi.decode(
+            LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.removePositionInRange, (hookData, posKey, snapshot))),
+            (SwapCount, BlockCount, uint128)
+        );
+
+        // 5. FCI accumulation (xk computation is algorithm, lives in V2)
+        if (!swapLifetime.isZero()) {
+            FeeShareRatio xk = fromFeeGrowthDelta(
+                rangeFeeGrowthNow0X128, positionFeeLast0X128, baseline0X128,
+                posLiq, totalRangeLiq
+            );
+            uint256 xSquaredQ128 = xk.square();
+
+            // 6. addStateTerm
+            LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.addStateTerm, (hookData, poolId, blockLifetime, xSquaredQ128)));
+
+            // 7. addEpochTerm
+            LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.addEpochTerm, (hookData, poolId, blockLifetime, xSquaredQ128)));
+        }
+
+        // 8. decrementPosCount
+        LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.decrementPosCount, (hookData, poolId)));
+
+        // 9. deleteFeeGrowthBaseline
+        LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.deleteFeeGrowthBaseline, (hookData, poolId, posKey)));
+
+        return (IHooks.afterRemoveLiquidity.selector, BalanceDelta.wrap(0));
     }
 
     // ── View (protocol-scoped via bytes2 flags) ──

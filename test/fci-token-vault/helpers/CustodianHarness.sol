@@ -26,9 +26,15 @@ import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {SqrtPriceLibrary} from "foundational-hooks/src/libraries/SqrtPriceLibrary.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {PoolKey} from "v4-core/src/types/PoolKey.sol";
+import {
+    ProtocolAdapterStorage,
+    protocolAdapterStorage,
+    V4_ADAPTER_SLOT
+} from "@protocol-adapter/storage/ProtocolAdapterStorage.sol";
+import {initializeAdapter} from "@protocol-adapter/modules/ProtocolAdapterMod.sol";
+import {IHooks} from "v4-core/src/interfaces/IHooks.sol";
 
-/// @dev Test harness composing both new modules. API matches FciTokenVaultHarness
-///      for backward compatibility with integration tests.
+/// @dev Test harness composing both new modules. Epoch-only: no decay.
 contract CustodianHarness {
     function harness_deposit(address depositor, uint256 amount) external {
         OraclePayoffStorage storage os = getOraclePayoffStorage();
@@ -48,7 +54,6 @@ contract CustodianHarness {
         uint256 longPayout = FixedPointMathLib.mulDiv(amount, os.longPayoutPerToken, SqrtPriceLibrary.Q96);
         uint256 shortPayout = amount - longPayout;
 
-        // Burn both sides
         custodianRedeemPair(redeemer, amount);
 
         CustodianStorage storage cs = getCustodianStorage();
@@ -71,10 +76,8 @@ contract CustodianHarness {
     function harness_getVaultStorage() external view returns (
         uint160 sqrtPriceStrike,
         uint160 sqrtPriceHWM,
-        uint256 halfLifeSeconds,
         uint256 expiry,
         uint256 totalDeposits,
-        uint256 lastHwmTimestamp,
         bool settled,
         uint256 longPayoutPerToken
     ) {
@@ -83,10 +86,8 @@ contract CustodianHarness {
         return (
             os.sqrtPriceStrike,
             os.sqrtPriceHWM,
-            os.halfLifeSeconds,
             os.expiry,
             uint256(cs.totalDeposits),
-            uint256(os.lastHwmTimestamp),
             os.settled,
             os.longPayoutPerToken
         );
@@ -94,10 +95,8 @@ contract CustodianHarness {
 
     function harness_initVault(
         uint160 sqrtPriceStrike,
-        uint256 halfLifeSeconds,
         uint256 expiry,
-        PoolKey calldata poolKey,
-        bool reactive,
+        bytes32 adapterSlot,
         address collateralToken
     ) external {
         CustodianStorage storage cs = getCustodianStorage();
@@ -105,24 +104,26 @@ contract CustodianHarness {
 
         OraclePayoffStorage storage os = getOraclePayoffStorage();
         os.sqrtPriceStrike = sqrtPriceStrike;
-        os.halfLifeSeconds = halfLifeSeconds;
         os.expiry = expiry;
-        os.lastHwmTimestamp = uint64(block.timestamp);
-        os.poolKey = poolKey;
-        os.reactive = reactive;
+        os.adapterSlot = adapterSlot;
     }
 
-    function harness_setHWM(uint160 hwm, uint256 timestamp) external {
-        OraclePayoffStorage storage os = getOraclePayoffStorage();
-        os.sqrtPriceHWM = hwm;
-        os.lastHwmTimestamp = uint64(timestamp);
+    /// @dev Initialize the protocol adapter storage for this harness.
+    function harness_initAdapter(
+        bytes32 slot,
+        address protocolState,
+        IHooks fciEntryPoint,
+        PoolKey calldata poolKey,
+        bool reactive
+    ) external {
+        initializeAdapter(slot, protocolState, fciEntryPoint, poolKey, reactive);
     }
 
-    function harness_getPoolKey() external view returns (PoolKey memory) {
-        return getOraclePayoffStorage().poolKey;
+    function harness_setHWM(uint160 hwm) external {
+        getOraclePayoffStorage().sqrtPriceHWM = hwm;
     }
 
-    function harness_getReactive() external view returns (bool) {
-        return getOraclePayoffStorage().reactive;
+    function harness_getAdapterSlot() external view returns (bytes32) {
+        return getOraclePayoffStorage().adapterSlot;
     }
 }

@@ -21,3 +21,15 @@ function fciFacetAdminStorage(bytes1 flag) pure returns (FCIFacetAdminStorage st
     bytes32 position = keccak256(abi.encode("thetaSwap.fci.facetAdmin", flag));
     assembly ("memory-safe") { $.slot := position }
 }
+
+function setProtocolCallback(bytes1 flag, IUnlockCallback protocolCallback) {
+    fciFacetAdminStorage(flag).protocolCallback = protocolCallback;
+}
+
+function getProtocolCallback(bytes1 flag) view returns (IUnlockCallback) {
+    return fciFacetAdminStorage(flag).protocolCallback;
+}
+
+function addPool(bytes1 flag, PoolId poolId) {
+    EnumerableSet.add(fciFacetAdminStorage(flag).poolIds, PoolId.unwrap(poolId));
+}

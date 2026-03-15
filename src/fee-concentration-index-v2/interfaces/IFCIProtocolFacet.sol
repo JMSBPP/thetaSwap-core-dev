@@ -31,6 +31,7 @@ interface IFCIProtocolFacet is IHooks {
 
     // ── Fee growth baseline ──
     function setFeeGrowthBaseline(bytes calldata hookData, PoolId poolId, bytes32 posKey, uint256 feeGrowth) external;
+    function getFeeGrowthBaseline(bytes calldata hookData, PoolId poolId, bytes32 posKey) external view returns (uint256);
     function deleteFeeGrowthBaseline(bytes calldata hookData, PoolId poolId, bytes32 posKey) external;
 
     // ── Position count ──

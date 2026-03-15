@@ -33,3 +33,11 @@ function getProtocolCallback(bytes2 flag) view returns (IUnlockCallback) {
 function addPool(bytes2 flag, PoolId poolId) {
     EnumerableSet.add(fciFacetAdminStorage(flag).poolIds, PoolId.unwrap(poolId));
 }
+
+function setProtocolStateView(bytes2 flag, IProtocolStateView stateView) {
+    fciFacetAdminStorage(flag).protocolStateView = stateView;
+}
+
+function getProtocolStateView(bytes2 flag) view returns (IProtocolStateView) {
+    return fciFacetAdminStorage(flag).protocolStateView;
+}

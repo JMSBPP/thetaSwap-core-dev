@@ -5,6 +5,7 @@ import {Script} from "forge-std/Script.sol";
 import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
 import {HookMiner} from "@uniswap/v4-periphery/src/utils/HookMiner.sol";
 import {FeeConcentrationIndex} from "@fee-concentration-index/FeeConcentrationIndex.sol";
+import {FeeConcentrationIndexV2} from "@fee-concentration-index-v2/FeeConcentrationIndexV2.sol";
 
 // Pre-calculated: AFTER_ADD_LIQUIDITY | BEFORE_REMOVE_LIQUIDITY | AFTER_REMOVE_LIQUIDITY | BEFORE_SWAP | AFTER_SWAP
 // = (1<<10) | (1<<9) | (1<<8) | (1<<7) | (1<<6) = 0x7C0
@@ -17,17 +18,28 @@ contract DeployFci is Script {
         poolManager = IPoolManager(poolManager_);
     }
 
-    function run() public returns (address hookAddress) {
+    function run() public returns (address v1Address, address v2Address) {
         bytes memory constructorArgs = abi.encode(address(poolManager));
-        (address addr, bytes32 salt) = HookMiner.find(
+
+        // ── Deploy V1 ──
+        (address v1Addr, bytes32 v1Salt) = HookMiner.find(
             msg.sender, FCI_HOOK_FLAGS,
             type(FeeConcentrationIndex).creationCode, constructorArgs
         );
-
         vm.broadcast();
-        FeeConcentrationIndex fci = new FeeConcentrationIndex{salt: salt}(address(poolManager));
-        require(address(fci) == addr, "DeployFci: hook address mismatch");
+        FeeConcentrationIndex v1 = new FeeConcentrationIndex{salt: v1Salt}(address(poolManager));
+        require(address(v1) == v1Addr, "DeployFci: V1 hook address mismatch");
 
-        hookAddress = address(fci);
+        // ── Deploy V2 ──
+        (address v2Addr, bytes32 v2Salt) = HookMiner.find(
+            msg.sender, FCI_HOOK_FLAGS,
+            type(FeeConcentrationIndexV2).creationCode, constructorArgs
+        );
+        vm.broadcast();
+        FeeConcentrationIndexV2 v2 = new FeeConcentrationIndexV2{salt: v2Salt}(address(poolManager));
+        require(address(v2) == v2Addr, "DeployFci: V2 hook address mismatch");
+
+        v1Address = address(v1);
+        v2Address = address(v2);
     }
 }

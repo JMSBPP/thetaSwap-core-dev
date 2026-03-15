@@ -33,6 +33,7 @@ remappings = [
     "solady/=lib/solady/src/",
     "compose/=lib/hook-bazaar/contracts/lib/Compose/src/",
     "@fee-concentration-index/=src/fee-concentration-index/",
+    "@fee-concentration-index-v2/=src/fee-concentration-index-v2/",
     "@reactive-integration/=src/reactive-integration/",
     "@protocol-adapter/=src/reactive-integration/template/",
     "@theta-swap-insurance/=src/theta-swap-insurance/",

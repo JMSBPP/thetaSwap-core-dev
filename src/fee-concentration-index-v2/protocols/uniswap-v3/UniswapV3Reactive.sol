@@ -7,35 +7,23 @@ import {coverDebt, depositToSystem} from "reactive-hooks/modules/DebtMod.sol";
 import {SYSTEM_CONTRACT} from "reactive-hooks/libraries/DebtLib.sol";
 import {requireVM} from "reactive-hooks/modules/ReactVMMod.sol";
 import {isReactiveVm, isActive} from "reactive-hooks/types/ReactVM.sol";
-import {
-    reactiveNetworkBatchSubscription,
-    reactVMBatchSubscription, reactVMBatchUnsubscription
-} from "reactive-hooks/libraries/SubscriptionLib.sol";
-import {
-    POOL_REGISTERED_SIG, POOL_UNREGISTERED_SIG,
-    selfSyncSigs, v3PoolSigs
-} from "./libraries/EventSignatures.sol";
-import {
-    isSelfSync, topic0, logChainId
-} from "reactive-hooks/types/LogRecordExtMod.sol";
-import {mutateV3Payload} from "./libraries/UniswapV3PayloadMutatorLib.sol";
-
-uint64 constant CALLBACK_GAS_LIMIT = 1_000_000;
+import {REACTIVE_IGNORE} from "reactive-hooks/libraries/SubscriptionLib.sol";
+import {POOL_ADDED_SIG} from "@fee-concentration-index-v2/libraries/PoolAddedSig.sol";
+import {handlePoolAdded, dispatchEvent} from "@fee-concentration-index-v2/modules/ReactiveDispatchMod.sol";
 
 /// @title UniswapV3Reactive
 /// @dev Reactive Network contract for V3 reactive integration.
-/// Dual-instance: RN subscribes to self-sync, ReactVM auto-subscribes to V3 pools
-/// when PoolRegistered is received, then forwards raw event data to UniswapV3Callback.
+/// Dual-instance: RN subscribes to PoolAdded from facet on origin chain,
+/// ReactVM auto-subscribes to V3 pool events via EDT + dispatches to callback.
 contract UniswapV3Reactive {
-    address immutable callback;
     ISubscriptionService immutable service;
 
-    constructor(address callback_) payable {
-        callback = callback_;
+    constructor(uint256 originChainId, address facetAddress) payable {
         service = ISubscriptionService(SYSTEM_CONTRACT);
 
         if (!isActive(isReactiveVm())) {
-            reactiveNetworkBatchSubscription(service, address(this), selfSyncSigs());
+            // Subscribe to PoolAdded events from the facet on the origin chain
+            service.subscribe(originChainId, facetAddress, POOL_ADDED_SIG, REACTIVE_IGNORE, REACTIVE_IGNORE, REACTIVE_IGNORE);
             depositToSystem(address(this));
         }
     }
@@ -43,27 +31,12 @@ contract UniswapV3Reactive {
     function react(IReactive.LogRecord calldata log) external {
         requireVM();
 
-        if (isSelfSync(log, address(this))) {
-            uint256 sig = topic0(log);
-            uint256 chainId_ = log.topic_1;
-            address pool = address(uint160(log.topic_2));
-
-            if (sig == POOL_REGISTERED_SIG) {
-                reactVMBatchSubscription(service, chainId_, pool, v3PoolSigs());
-            } else if (sig == POOL_UNREGISTERED_SIG) {
-                reactVMBatchUnsubscription(service, chainId_, pool, v3PoolSigs());
-            }
+        if (log.topic_0 == POOL_ADDED_SIG) {
+            handlePoolAdded(log, service);
             return;
         }
 
-        emit IReactive.Callback(
-            logChainId(log), callback, CALLBACK_GAS_LIMIT,
-            abi.encodeWithSignature(
-                "unlockCallbackReactive(address,bytes)",
-                address(0),
-                mutateV3Payload(log)
-            )
-        );
+        dispatchEvent(log);
     }
 
     function fund() external payable {

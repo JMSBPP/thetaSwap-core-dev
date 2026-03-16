@@ -14,6 +14,7 @@ import {LiquidityPositionSnapshot} from "@fee-concentration-index-v2/types/Liqui
 import {NATIVE_V4} from "@fee-concentration-index-v2/types/FlagsRegistry.sol";
 import {IHooks} from "v4-core/src/interfaces/IHooks.sol";
 import {IFeeConcentrationIndex} from "@fee-concentration-index/interfaces/IFeeConcentrationIndex.sol";
+import {IUnlockCallback} from "v4-core/src/interfaces/callback/IUnlockCallback.sol";
 import {
     fciFacetAdminStorage, addPool, setProtocolStateView as _setProtocolStateView, setFci as _setFci
 } from "@fee-concentration-index-v2/modules/FCIFacetAdminStorageMod.sol";
@@ -56,10 +57,11 @@ contract NativeUniswapV4Facet {
     event PoolAdded(address indexed facet, address indexed callback, PoolId indexed poolId, bytes2 protocolFlag, bytes data);
 
     /// @notice Initialize the facet — sets owner, PoolManager, and FCI reference.
-    function initialize(address _owner, IProtocolStateView _protocolStateView, IFeeConcentrationIndex _fci) external {
+    function initialize(address _owner, IProtocolStateView _protocolStateView, IFeeConcentrationIndex _fci, IUnlockCallback _callback) external {
         initOwner(_owner);
         _setProtocolStateView(NATIVE_V4, _protocolStateView);
         _setFci(NATIVE_V4, _fci);
+        // V4 native has no callback — _callback is ignored (address(0))
     }
     error PoolAlreadyInitialized(PoolId poolId);
 

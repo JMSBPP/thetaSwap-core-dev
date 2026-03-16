@@ -12,8 +12,12 @@ import {LiquidityPositionSnapshot} from "@fee-concentration-index-v2/types/Liqui
 import {UNISWAP_V3_REACTIVE} from "@fee-concentration-index-v2/types/FlagsRegistry.sol";
 import {IFeeConcentrationIndex} from "@fee-concentration-index/interfaces/IFeeConcentrationIndex.sol";
 import {IProtocolStateView} from "@protocol-adapter/interfaces/IProtocolStateView.sol";
+import {IUnlockCallback} from "v4-core/src/interfaces/callback/IUnlockCallback.sol";
 import {
-    fciFacetAdminStorage, addPool, setProtocolStateView as _setProtocolStateView, setFci as _setFci
+    fciFacetAdminStorage, addPool,
+    setProtocolStateView as _setProtocolStateView,
+    setFci as _setFci,
+    setProtocolCallback as _setProtocolCallback
 } from "@fee-concentration-index-v2/modules/FCIFacetAdminStorageMod.sol";
 import {
     FeeConcentrationIndexV2Storage
@@ -57,10 +61,11 @@ contract UniswapV3Facet {
     event PoolAdded(address indexed facet, address indexed callback, PoolId indexed poolId, bytes2 protocolFlag, bytes data);
     error PoolAlreadyRegistered(PoolId poolId);
 
-    function initialize(address _owner, IProtocolStateView _protocolStateView, IFeeConcentrationIndex _fci) external {
+    function initialize(address _owner, IProtocolStateView _protocolStateView, IFeeConcentrationIndex _fci, IUnlockCallback _callback) external {
         initOwner(_owner);
         _setProtocolStateView(UNISWAP_V3_REACTIVE, _protocolStateView);
         _setFci(UNISWAP_V3_REACTIVE, _fci);
+        _setProtocolCallback(UNISWAP_V3_REACTIVE, _callback);
     }
 
     /// @notice Register a V3 pool for FCI tracking.
@@ -73,7 +78,7 @@ contract UniswapV3Facet {
         addPool(UNISWAP_V3_REACTIVE, poolId);
         emit PoolAdded(
             address(this),
-            address(fciFacetAdminStorage(UNISWAP_V3_REACTIVE).fci),
+            address(fciFacetAdminStorage(UNISWAP_V3_REACTIVE).protocolCallback),
             poolId,
             UNISWAP_V3_REACTIVE,
             encodeV3PoolAddedData(block.chainid, address(v3Pool), address(v3Pool))

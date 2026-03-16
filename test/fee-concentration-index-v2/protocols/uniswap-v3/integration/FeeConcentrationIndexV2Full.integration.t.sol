@@ -17,6 +17,7 @@ import {IFCIProtocolFacet} from "@fee-concentration-index-v2/interfaces/IFCIProt
 import {IFeeConcentrationIndex} from "@fee-concentration-index/interfaces/IFeeConcentrationIndex.sol";
 import {IProtocolStateView} from "@protocol-adapter/interfaces/IProtocolStateView.sol";
 import {UNISWAP_V3_REACTIVE} from "@fee-concentration-index-v2/types/FlagsRegistry.sol";
+import {IUnlockCallback} from "v4-core/src/interfaces/callback/IUnlockCallback.sol";
 
 /// @title FCI V2 Full Integration — Uniswap V3 Reactive (Sepolia Live)
 /// @notice Deploy:
@@ -66,18 +67,7 @@ contract FeeConcentrationIndexV2FullIntegrationTest is Test {
         vm.stopBroadcast();
         console2.log("FCI_V2=%s", address(fci));
 
-        // ── 2. Deploy + initialize UniswapV3Facet ──
-        vm.startBroadcast(accounts.deployer.privateKey);
-        facet = new UniswapV3Facet();
-        facet.initialize(
-            accounts.deployer.addr,
-            IProtocolStateView(address(v3Pool)),
-            IFeeConcentrationIndex(address(fci))
-        );
-        vm.stopBroadcast();
-        console2.log("V3_FACET=%s", address(facet));
-
-        // ── 3. Deploy UniswapV3Callback ──
+        // ── 3. Deploy UniswapV3Callback (needs FCI address) ──
         vm.startBroadcast(accounts.deployer.privateKey);
         callback = new UniswapV3Callback(
             address(fci),
@@ -86,6 +76,18 @@ contract FeeConcentrationIndexV2FullIntegrationTest is Test {
         );
         vm.stopBroadcast();
         console2.log("V3_CALLBACK=%s", address(callback));
+
+        // ── 4. Deploy + initialize UniswapV3Facet (needs callback address) ──
+        vm.startBroadcast(accounts.deployer.privateKey);
+        facet = new UniswapV3Facet();
+        facet.initialize(
+            accounts.deployer.addr,
+            IProtocolStateView(address(v3Pool)),
+            IFeeConcentrationIndex(address(fci)),
+            IUnlockCallback(address(callback))
+        );
+        vm.stopBroadcast();
+        console2.log("V3_FACET=%s", address(facet));
 
         // ── 4. Fund callback with SepETH for pay() ──
         vm.startBroadcast(accounts.deployer.privateKey);

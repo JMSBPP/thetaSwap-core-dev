@@ -11,6 +11,7 @@ import {IFCIProtocolFacet} from "@fee-concentration-index-v2/interfaces/IFCIProt
 import {IProtocolStateView} from "@protocol-adapter/interfaces/IProtocolStateView.sol";
 import {IFeeConcentrationIndex} from "@fee-concentration-index/interfaces/IFeeConcentrationIndex.sol";
 import {NATIVE_V4} from "@fee-concentration-index-v2/types/FlagsRegistry.sol";
+import {IUnlockCallback} from "v4-core/src/interfaces/callback/IUnlockCallback.sol";
 
 // Pre-calculated: AFTER_ADD_LIQUIDITY | BEFORE_REMOVE_LIQUIDITY | AFTER_REMOVE_LIQUIDITY | BEFORE_SWAP | AFTER_SWAP
 // = (1<<10) | (1<<9) | (1<<8) | (1<<7) | (1<<6) = 0x7C0
@@ -53,7 +54,8 @@ contract DeployFci is Script {
         facet.initialize(
             msg.sender,
             IProtocolStateView(address(poolManager)),
-            IFeeConcentrationIndex(address(v2))
+            IFeeConcentrationIndex(address(v2)),
+            IUnlockCallback(address(0))  // V4 native has no callback
         );
         v2.registerProtocolFacet(NATIVE_V4, IFCIProtocolFacet(address(facet)));
 

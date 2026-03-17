@@ -20,7 +20,10 @@ Three phases deliver the `d2p` binary: scaffolding the Rust crate (Phase 1), imp
   1. `cargo build` in `d2p/` succeeds with zero errors
   2. `D2pError` enum, `DeployParams` struct, and `DeployOutput` struct exist as distinct modules
   3. All four dependencies (clap 4.5, anyhow 1.x, thiserror 2.x, serde_json 1.x) are pinned in Cargo.toml
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 01-01-PLAN.md — Scaffold crate manifest, entry point, shared types, and unit tests
 
 ### Phase 2: Deploy Logic
 **Goal**: Working `Runner::deploy()` that tries `forge create`, falls back to `cast send --create`, verifies receipt status, and returns a pipe-friendly output or a typed error — before any CLI argument parsing exists
@@ -53,6 +56,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Crate Foundation | 0/? | Not started | - |
+| 1. Crate Foundation | 0/1 | Planned | - |
 | 2. Deploy Logic | 0/? | Not started | - |
 | 3. CLI Wiring | 0/? | Not started | - |

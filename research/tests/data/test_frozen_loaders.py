@@ -82,3 +82,16 @@ def test_pool_concentrations_loader_matches_baseline():
         for pc in POOL_CONCENTRATIONS
     ]
     assert _sha(serialized) == BASELINE["pool_concentrations"]
+
+def test_per_position_fees_hash_matches_baseline():
+    frozen = json.loads((FROZEN_DIR / "per_position_fees.json").read_text())
+    assert _sha(frozen["data"]) == BASELINE["per_position_fees"]
+    assert frozen["metadata"]["source"] == "dune"
+    assert frozen["metadata"]["query_id"] == 6815916
+
+def test_per_position_fees_loader_matches_baseline():
+    from econometrics.per_position_data import PER_POSITION_DATA
+    serialized = [[d, bl, xs, tid] for d, bl, xs, tid in PER_POSITION_DATA]
+    assert _sha(serialized) == BASELINE["per_position_fees"]
+    assert len(PER_POSITION_DATA) == 50
+    assert isinstance(PER_POSITION_DATA[0], tuple)

@@ -40,6 +40,7 @@ remappings = [
     "@theta-swap-insurance/=src/theta-swap-insurance/",
     "@types/=src/types/",
     "@libraries/=src/libraries/",
+    "@utils/=src/utils/",
     "@foundry-script/=foundry-script/",
     "foundry-devops/=lib/foundry-devops/src/",
 ]

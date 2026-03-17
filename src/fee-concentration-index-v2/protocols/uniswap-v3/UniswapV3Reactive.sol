@@ -8,6 +8,8 @@ import {SYSTEM_CONTRACT} from "reactive-hooks/libraries/DebtLib.sol";
 import {REACTIVE_IGNORE} from "reactive-hooks/libraries/SubscriptionLib.sol";
 import {V3_SWAP_SIG, V3_MINT_SIG, V3_BURN_SIG} from "./libraries/EventSignatures.sol";
 import {mutateV3Payload} from "./libraries/UniswapV3PayloadMutatorLib.sol";
+import {initOwner, requireOwner, transferOwnership as _transferOwnership} from "../../modules/dependencies/LibOwner.sol";
+import {migrateFunds as _migrateFunds} from "../../modules/dependencies/AdminLib.sol";
 
 uint64 constant CALLBACK_GAS_LIMIT = 1_000_000;
 
@@ -16,17 +18,18 @@ uint64 constant CALLBACK_GAS_LIMIT = 1_000_000;
 /// Dual-instance: RN manages subscriptions, ReactVM processes events.
 /// V1-proven pattern: bool immutable vm, explicit registerPool, direct subscribe.
 contract UniswapV3Reactive {
-    address immutable owner;
-    address immutable callback;
+    address public callback;
     ISubscriptionService immutable service;
     bool immutable vm;
 
-    error OnlyOwner();
+    error ZeroAddress();
     error OnlyReactVM();
     error OnlyRN();
 
+    event CallbackUpdated(address indexed oldCallback, address indexed newCallback);
+
     constructor(address callback_) payable {
-        owner = msg.sender;
+        initOwner(msg.sender);
         callback = callback_;
         service = ISubscriptionService(SYSTEM_CONTRACT);
 
@@ -53,7 +56,7 @@ contract UniswapV3Reactive {
     }
 
     function registerPool(uint256 chainId_, address pool) external {
-        if (msg.sender != owner) revert OnlyOwner();
+        requireOwner();
         if (vm) revert OnlyRN();
         service.subscribe(chainId_, pool, V3_SWAP_SIG, REACTIVE_IGNORE, REACTIVE_IGNORE, REACTIVE_IGNORE);
         service.subscribe(chainId_, pool, V3_MINT_SIG, REACTIVE_IGNORE, REACTIVE_IGNORE, REACTIVE_IGNORE);
@@ -61,11 +64,29 @@ contract UniswapV3Reactive {
     }
 
     function unregisterPool(uint256 chainId_, address pool) external {
-        if (msg.sender != owner) revert OnlyOwner();
+        requireOwner();
         if (vm) revert OnlyRN();
         service.unsubscribe(chainId_, pool, V3_SWAP_SIG, REACTIVE_IGNORE, REACTIVE_IGNORE, REACTIVE_IGNORE);
         service.unsubscribe(chainId_, pool, V3_MINT_SIG, REACTIVE_IGNORE, REACTIVE_IGNORE, REACTIVE_IGNORE);
         service.unsubscribe(chainId_, pool, V3_BURN_SIG, REACTIVE_IGNORE, REACTIVE_IGNORE, REACTIVE_IGNORE);
+    }
+
+    function setCallback(address newCallback) external {
+        requireOwner();
+        if (newCallback == address(0)) revert ZeroAddress();
+        address oldCallback = callback;
+        callback = newCallback;
+        emit CallbackUpdated(oldCallback, newCallback);
+    }
+
+    function migrateFunds(address payable to) external {
+        requireOwner();
+        _migrateFunds(to, address(this).balance);
+    }
+
+    function transferOwnership(address newOwner) external {
+        requireOwner();
+        _transferOwnership(newOwner);
     }
 
     function fund() external payable {

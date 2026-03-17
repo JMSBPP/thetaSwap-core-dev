@@ -66,3 +66,19 @@ def test_selected_pools_loader_matches_baseline():
         for p in SELECTED_POOLS
     ]
     assert _sha(serialized) == BASELINE["selected_pools"]
+
+def test_pool_concentrations_hash_matches_baseline():
+    frozen = json.loads((FROZEN_DIR / "cross_pool_concentrations.json").read_text())
+    assert _sha(frozen["data"]) == BASELINE["pool_concentrations"]
+    assert frozen["metadata"]["source"] == "dune"
+    assert frozen["metadata"]["query_id"] == 6784588
+
+def test_pool_concentrations_loader_matches_baseline():
+    from econometrics.cross_pool.data import POOL_CONCENTRATIONS
+    serialized = [
+        {"pool_address": pc.pool.address, "a_t": pc.a_t, "a_t_null": pc.a_t_null,
+         "delta_plus": pc.delta_plus, "n_positions": pc.n_positions,
+         "n_removals": pc.n_removals, "window_days": pc.window_days}
+        for pc in POOL_CONCENTRATIONS
+    ]
+    assert _sha(serialized) == BASELINE["pool_concentrations"]

@@ -33,6 +33,7 @@ import {LibCall} from "solady/utils/LibCall.sol";
 import {requireOwner, initOwner} from "@fee-concentration-index-v2/modules/dependencies/LibOwner.sol";
 import {LiquidityPositionSnapshot} from "@fee-concentration-index-v2/types/LiquidityPositionSnapshot.sol";
 import {PositionConfig} from "@uniswap/v4-periphery/src/libraries/PositionConfig.sol";
+import {thetaWeight} from "@types/BlockCountExt.sol";
 
 // Fee Concentration Index V2 — Protocol-agnostic orchestrator.
 // Hook flow (algorithm) lives here. Protocol-specific behavior is delegatecalled
@@ -40,6 +41,17 @@ import {PositionConfig} from "@uniswap/v4-periphery/src/libraries/PositionConfig
 // NATIVE_V4 (0xFFFF) is a registered facet like any other protocol.
 
 contract FeeConcentrationIndexV2 {
+
+    event FCITermAccumulated(
+        PoolId indexed poolId,
+        bytes2 indexed protocolFlags,
+        bytes32 indexed posKey,
+        uint128 xk,
+        uint256 xSquaredQ128,
+        uint256 thetaK,
+        uint256 blockLifetime,
+        uint256 swapLifetime
+    );
 
     // ── afterAddLiquidity ──
 
@@ -255,6 +267,17 @@ contract FeeConcentrationIndexV2 {
                 posLiq, totalRangeLiq
             );
             uint256 xSquaredQ128 = xk.square();
+
+            emit FCITermAccumulated(
+                poolId,
+                protocolFlags,
+                posKey,
+                xk.unwrap(),
+                xSquaredQ128,
+                thetaWeight(blockLifetime),
+                BlockCount.unwrap(blockLifetime),
+                SwapCount.unwrap(swapLifetime)
+            );
 
             // 6. addStateTerm
             LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.addStateTerm, (hookData, poolId, blockLifetime, xSquaredQ128)));

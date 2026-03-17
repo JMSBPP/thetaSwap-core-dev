@@ -11,6 +11,7 @@ import {TickRange, fromTicksPacked, intersects} from "typed-uniswap-v4/types/Tic
 import {SwapCount} from "typed-uniswap-v4/types/SwapCountMod.sol";
 import {BlockCount} from "typed-uniswap-v4/types/BlockCountMod.sol";
 import {LiquidityPositionSnapshot} from "@fee-concentration-index-v2/types/LiquidityPositionSnapshot.sol";
+import {RangeSnapshot} from "@fee-concentration-index-v2/types/RangeSnapshot.sol";
 import {NATIVE_V4} from "@fee-concentration-index-v2/types/FlagsRegistry.sol";
 import {IHooks} from "v4-core/src/interfaces/IHooks.sol";
 import {IFeeConcentrationIndex} from "@fee-concentration-index/interfaces/IFeeConcentrationIndex.sol";
@@ -228,5 +229,55 @@ contract NativeUniswapV4Facet {
         }
 
         $.epochStates[poolId][epochId].addTerm(blockLifetime, xSquaredQ128);
+    }
+
+    // ── Registry reads (metrics facet support) ──
+
+    function getRegistryRangeSnapshot(bytes2, PoolId poolId, TickRange rk) external view returns (RangeSnapshot memory snapshot) {
+        FeeConcentrationIndexV2Storage storage $ = protocolFciStorage(NATIVE_V4);
+        bytes32 rkRaw = TickRange.unwrap(rk);
+        snapshot.tickLower = rk.lowerTick();
+        snapshot.tickUpper = rk.upperTick();
+        snapshot.totalLiquidity = $.registries[poolId].totalRangeLiquidity[rkRaw];
+        snapshot.swapCount = SwapCount.unwrap($.registries[poolId].rangeSwapCount[rkRaw]);
+        snapshot.positionKeys = $.registries[poolId].positionsInRange(rk);
+        snapshot.positionCount = snapshot.positionKeys.length;
+    }
+
+    function getRegistryActiveRanges(bytes2, PoolId poolId) external view returns (TickRange[] memory ranges) {
+        FeeConcentrationIndexV2Storage storage $ = protocolFciStorage(NATIVE_V4);
+        uint256 count = $.registries[poolId].activeRangeCount();
+        ranges = new TickRange[](count);
+        for (uint256 i; i < count; ++i) {
+            ranges[i] = TickRange.wrap($.registries[poolId].activeRangeAt(i));
+        }
+    }
+
+    function getRegistryAllSnapshots(bytes2, PoolId poolId) external view returns (RangeSnapshot[] memory snapshots) {
+        FeeConcentrationIndexV2Storage storage $ = protocolFciStorage(NATIVE_V4);
+        uint256 count = $.registries[poolId].activeRangeCount();
+        snapshots = new RangeSnapshot[](count);
+        for (uint256 i; i < count; ++i) {
+            TickRange rk = TickRange.wrap($.registries[poolId].activeRangeAt(i));
+            bytes32 rkRaw = TickRange.unwrap(rk);
+            snapshots[i].tickLower = rk.lowerTick();
+            snapshots[i].tickUpper = rk.upperTick();
+            snapshots[i].totalLiquidity = $.registries[poolId].totalRangeLiquidity[rkRaw];
+            snapshots[i].swapCount = SwapCount.unwrap($.registries[poolId].rangeSwapCount[rkRaw]);
+            snapshots[i].positionKeys = $.registries[poolId].positionsInRange(rk);
+            snapshots[i].positionCount = snapshots[i].positionKeys.length;
+        }
+    }
+
+    function getRegistryPositionBaseline(bytes2, PoolId poolId, bytes32 posKey) external view returns (uint256) {
+        return protocolFciStorage(NATIVE_V4).feeGrowthBaseline0[poolId][posKey];
+    }
+
+    function getRegistryPositionAddBlock(bytes2, PoolId poolId, bytes32 posKey) external view returns (uint256) {
+        return protocolFciStorage(NATIVE_V4).registries[poolId].positionAddBlock[posKey];
+    }
+
+    function getRegistryPositionSwapLifetime(bytes2, PoolId poolId, bytes32 posKey) external view returns (uint256) {
+        return SwapCount.unwrap(protocolFciStorage(NATIVE_V4).registries[poolId].getLifetime(posKey));
     }
 }

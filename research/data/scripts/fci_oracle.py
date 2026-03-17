@@ -357,7 +357,7 @@ def main():
     # Resolve paths relative to the project root
     script_dir = Path(__file__).resolve().parent
     project_root = script_dir.parent.parent
-    input_path = project_root / "data" / "raw" / "fci_weth_usdc_v4_events.json"
+    input_path = project_root / "data" / "frozen" / "fci_v4_events.json"
     output_path = project_root / "data" / "fixtures" / "fci_weth_usdc_v4.json"
 
     if not input_path.exists():
@@ -366,6 +366,10 @@ def main():
 
     with open(input_path, "r") as f:
         raw = json.load(f)
+
+    # Unwrap canonical frozen format — data preserves original structure
+    if "metadata" in raw and "data" in raw:
+        raw = raw["data"]
 
     events = raw["events"]
     print(f"Loaded {len(events)} events from {input_path}")

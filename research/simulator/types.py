@@ -105,14 +105,74 @@ class RangeEntry:
 
 
 @dataclass(frozen=True)
-class FCIMetrics:
-    """Expected FCI metric values — the differential testing target."""
+class EpochMetrics:
+    """Epoch-scoped FCI metrics — maps to getDeltaPlusEpoch()."""
+    epoch_id: int
     accumulated_sum: int    # Q128
     index_a: int            # Q128
     theta_sum: int          # Q128
     removed_pos_count: int
     at_null: int            # Q128
     delta_plus: int         # Q128
+
+
+@dataclass(frozen=True)
+class RangeSnapshotExpected:
+    """Expected per-range state — maps to getRegistryRangeSnapshot()."""
+    tick_lower: int
+    tick_upper: int
+    total_liquidity: int
+    swap_count: int
+    position_count: int
+    position_keys: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class PositionExpected:
+    """Expected per-position state — maps to facet registry reads."""
+    pos_key: str                   # agent_id (maps to posKey in Solidity)
+    fee_growth_baseline: int       # getRegistryPositionBaseline()
+    add_block: int                 # getRegistryPositionAddBlock()
+    swap_lifetime: int             # getRegistryPositionSwapLifetime()
+
+
+@dataclass(frozen=True)
+class FCIMetrics:
+    """
+    Expected FCI metric values — maps 1:1 to FCI V2 interface.
+
+    Top-level (FeeConcentrationIndexV2):
+      getIndex()        → (index_a, theta_sum, removed_pos_count)
+      getDeltaPlus()    → delta_plus
+      getAtNull()       → at_null
+      getThetaSum()     → theta_sum
+      getDeltaPlusEpoch → epochs[i].delta_plus
+
+    Per-range (IFCIProtocolFacet):
+      getRegistryAllSnapshots() → ranges
+      getRegistryActiveRanges() → active range keys
+
+    Per-position (IFCIProtocolFacet):
+      getRegistryPositionBaseline()    → fee growth at registration
+      getRegistryPositionAddBlock()    → block number at registration
+      getRegistryPositionSwapLifetime() → swaps during lifetime
+    """
+    # ── Top-level (cumulative) ──
+    accumulated_sum: int    # Q128 — internal
+    index_a: int            # Q128
+    theta_sum: int          # Q128
+    removed_pos_count: int
+    at_null: int            # Q128
+    delta_plus: int         # Q128
+
+    # ── Epoch ──
+    epochs: tuple[EpochMetrics, ...] = ()
+
+    # ── Per-range snapshots (state at query time) ──
+    ranges: tuple[RangeSnapshotExpected, ...] = ()
+
+    # ── Per-position (active positions at query time) ──
+    positions: tuple[PositionExpected, ...] = ()
 
 
 # ── Scenario definition ──

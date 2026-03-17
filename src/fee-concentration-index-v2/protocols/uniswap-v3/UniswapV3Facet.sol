@@ -103,14 +103,14 @@ contract UniswapV3Facet {
         (posLiquidity, feeGrowthLast,,,) = IUniswapV3Pool(pool).positions(posKey);
 
         // V3 reactive burn path: hookData carries posLiqBefore from ReactVM shadow.
-        // Override posLiquidity AND feeGrowthLast.
-        // feeGrowthLast = baseline so fromFeeGrowthDelta reduces to posLiq/totalRangeLiq
-        // (exact for V3: fees accrue proportional to liquidity share).
+        // V1 approach: x_k = posLiq / totalRangeLiq (exact for V3 — fees are per-unit-of-liq).
+        // Set feeGrowthLast = 0; combined with getFeeGrowthBaseline returning 0,
+        // fromFeeGrowthDelta reduces to feeRatio=1 × posLiq/totalRangeLiq.
         if (hookData.length >= 39) {
             uint128 posLiqOverride = decodePosLiqBefore(hookData);
             if (posLiqOverride > 0) {
                 posLiquidity = posLiqOverride;
-                feeGrowthLast = protocolFciStorage(UNISWAP_V3_REACTIVE).feeGrowthBaseline0[poolId][posKey];
+                feeGrowthLast = 0;
             }
         }
     }
@@ -169,7 +169,12 @@ contract UniswapV3Facet {
         protocolFciStorage(UNISWAP_V3_REACTIVE).feeGrowthBaseline0[poolId][posKey] = feeGrowth;
     }
 
-    function getFeeGrowthBaseline(bytes calldata, PoolId poolId, bytes32 posKey) external view onlyDelegateCall returns (uint256) {
+    function getFeeGrowthBaseline(bytes calldata hookData, PoolId poolId, bytes32 posKey) external view onlyDelegateCall returns (uint256) {
+        // V3 reactive burn path: return 0 so fromFeeGrowthDelta reduces to posLiq/totalRangeLiq.
+        if (hookData.length >= 39) {
+            uint128 posLiqOverride = decodePosLiqBefore(hookData);
+            if (posLiqOverride > 0) return 0;
+        }
         return protocolFciStorage(UNISWAP_V3_REACTIVE).feeGrowthBaseline0[poolId][posKey];
     }
 

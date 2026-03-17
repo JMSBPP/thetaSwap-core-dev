@@ -14,6 +14,8 @@ import {
     decodeV3MintFromLog, decodeV3SwapFromLog, decodeV3BurnFromLog
 } from "./libraries/V3HookDataLib.sol";
 import {V3_MINT_SIG, V3_SWAP_SIG, V3_BURN_SIG} from "./libraries/EventSignatures.sol";
+import {initOwner, requireOwner, transferOwnership as _transferOwnership} from "../../modules/dependencies/LibOwner.sol";
+import {migrateFunds as _migrateFunds} from "../../modules/dependencies/AdminLib.sol";
 
 /// @title UniswapV3Callback
 /// @dev Receives reactive callbacks from the Reactive Network callback proxy.
@@ -21,12 +23,11 @@ import {V3_MINT_SIG, V3_SWAP_SIG, V3_BURN_SIG} from "./libraries/EventSignatures
 /// and calls FCI V2's hook functions.
 /// Uses V1-proven authorizedCallers pattern for callback authentication.
 contract UniswapV3Callback {
-    IHooks immutable fci;
+    IHooks public fci;
     address public rvmId;
-    address immutable owner;
     mapping(address => bool) public authorizedCallers;
 
-    error OnlyOwner();
+    error ZeroAddress();
     error InvalidRvmId();
     error NotAuthorized();
     error InsufficientFunds();
@@ -34,25 +35,44 @@ contract UniswapV3Callback {
 
     event AuthorizedCallerUpdated(address indexed caller, bool authorized);
     event RvmIdUpdated(address indexed oldRvmId, address indexed newRvmId);
+    event FciUpdated(address indexed oldFci, address indexed newFci);
 
     constructor(address fci_, address callbackProxy_, address rvmId_) payable {
         fci = IHooks(fci_);
-        owner = msg.sender;
+        initOwner(msg.sender);
         rvmId = rvmId_;
         authorizedCallers[callbackProxy_] = true;
     }
 
+    function setFci(address newFci) external {
+        requireOwner();
+        if (newFci == address(0)) revert ZeroAddress();
+        address oldFci = address(fci);
+        fci = IHooks(newFci);
+        emit FciUpdated(oldFci, newFci);
+    }
+
     function setRvmId(address rvmId_) external {
-        if (msg.sender != owner) revert OnlyOwner();
+        requireOwner();
         address old = rvmId;
         rvmId = rvmId_;
         emit RvmIdUpdated(old, rvmId_);
     }
 
     function setAuthorized(address caller, bool authorized) external {
-        if (msg.sender != owner) revert OnlyOwner();
+        requireOwner();
         authorizedCallers[caller] = authorized;
         emit AuthorizedCallerUpdated(caller, authorized);
+    }
+
+    function migrateFunds(address payable to) external {
+        requireOwner();
+        _migrateFunds(to, address(this).balance);
+    }
+
+    function transferOwnership(address newOwner) external {
+        requireOwner();
+        _transferOwnership(newOwner);
     }
 
     function unlockCallback(bytes calldata) external returns (bytes memory) {}

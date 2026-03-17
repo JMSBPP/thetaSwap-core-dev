@@ -98,16 +98,19 @@ contract UniswapV3Facet {
 
     // ── Fee growth reads ──
 
-    function latestPositionFeeGrowthInside(bytes calldata hookData, PoolId, bytes32 posKey) external view onlyDelegateCall returns (uint128 posLiquidity, uint256 feeGrowthLast) {
+    function latestPositionFeeGrowthInside(bytes calldata hookData, PoolId poolId, bytes32 posKey) external view onlyDelegateCall returns (uint128 posLiquidity, uint256 feeGrowthLast) {
         address pool = decodePoolAddress(hookData);
         (posLiquidity, feeGrowthLast,,,) = IUniswapV3Pool(pool).positions(posKey);
 
-        // Override posLiquidity from hookData when present (V3 reactive burn path).
-        // Burn hookData is 39 bytes (23 header + 16 posLiqBefore).
+        // V3 reactive burn path: hookData carries posLiqBefore from ReactVM shadow.
+        // Override posLiquidity AND feeGrowthLast.
+        // feeGrowthLast = baseline so fromFeeGrowthDelta reduces to posLiq/totalRangeLiq
+        // (exact for V3: fees accrue proportional to liquidity share).
         if (hookData.length >= 39) {
             uint128 posLiqOverride = decodePosLiqBefore(hookData);
             if (posLiqOverride > 0) {
                 posLiquidity = posLiqOverride;
+                feeGrowthLast = protocolFciStorage(UNISWAP_V3_REACTIVE).feeGrowthBaseline0[poolId][posKey];
             }
         }
     }

@@ -1,82 +1,19 @@
 """Per-position data from Dune queries for ETH/USDC 0.3% pool, Dec 20-26 2025.
 
 Three datasets, progressively refined:
+1. PER_POSITION_DATA_TOTAL_VALUE (Dune 6815894) — total Collect proxy
+2. PER_POSITION_DATA_EXIT_FEES (Dune 6815901) — exit-only fees (54% zero)
+3. PER_POSITION_DATA (Dune 6815916) ← RECOMMENDED, lifetime fees
 
-1. PER_POSITION_DATA_TOTAL_VALUE (Dune 6815894, 0.107 credits)
-   fee_share_x_k = total Collect / pool daily Collect (principal + fees proxy)
-
-2. PER_POSITION_DATA_EXIT_FEES (Dune 6815901, 0.075 credits)
-   fee_share_x_k = (Collect - Decrease) at exit tx only / pool swap fees
-   Problem: 54% of positions had zero fees (collected in earlier txs)
-
-3. PER_POSITION_DATA (Dune 6815916, 0.111 credits) ← RECOMMENDED
-   fee_share_x_k = SUM(all lifetime Collects) - SUM(all lifetime Decreases)
-                    / pool daily swap fees
-   Properly tracks ALL fee collections across position lifetime.
-   x_k range: 0 to 0.548. 15/50 still zero (short-lived JIT, no USDC fees).
+Now loaded from data/frozen/per_position_fees.json.
 """
 from __future__ import annotations
+import json as _json
+from pathlib import Path as _Path
 
-# fmt: off
+_FROZEN = _Path(__file__).resolve().parent.parent / "data" / "frozen"
+_ppd = _json.loads((_FROZEN / "per_position_fees.json").read_text())
 
-# ── Recommended: Lifetime fees (all Collects - all Decreases) ──────
-# Dune Query ID: 6815916 | Execution: 01KKFB8WHX57FX0G5PG0QB0HWJ
-# Each tuple: (burn_date, block_lifetime, fee_share_x_k, token_id)
-PER_POSITION_DATA: tuple[tuple[str, int, float, int], ...] = (
-    # Dec 20 — 9 positions
-    ("2025-12-20",  50235, 0.11416397221303964,  1151552),
-    ("2025-12-20", 907124, 0.11488672873857118,  1058728),
-    ("2025-12-20",  28878, 0.03318233440502982,  1153574),
-    ("2025-12-20",   8742, 0.0006754249471598361, 1155986),
-    ("2025-12-20", 193344, 0.031017456372652828, 1137687),
-    ("2025-12-20",  20857, 0.0013245536704820117, 1154600),
-    ("2025-12-20",  20224, 0.000017059158632069385, 1154722),
-    ("2025-12-20",  16662, 0.010419652407150183, 1155157),
-    ("2025-12-20",    457, 1.4670487271686412e-11, 1156885),
-    # Dec 21 — 12 positions
-    ("2025-12-21", 121286, 0.005574327408190567, 1145254),
-    ("2025-12-21",   4019, 0.0000015982595491025167, 1156948),
-    ("2025-12-21",   5788, 3.7075308851279274e-8, 1156778),
-    ("2025-12-21",      5, 0.0,                   1157270),
-    ("2025-12-21",  47440, 0.001180760130087692,  1152510),
-    ("2025-12-21", 326467, 0.01909469839624366,   1123898),
-    ("2025-12-21", 670512, 0.5483549542805051,    1086931),
-    ("2025-12-21", 326380, 0.0008559725532143452, 1123941),
-    ("2025-12-21",     25, 0.0,                   1157514),
-    ("2025-12-21",      7, 0.0,                   1157531),
-    ("2025-12-21",     10, 0.0,                   1157540),
-    ("2025-12-21", 345800, 0.00005102740836020432, 1121635),
-    # Dec 22 — 18 positions
-    ("2025-12-22", 742764, 0.00011492590040074354, 1080242),
-    ("2025-12-22",  32200, 0.0024709848891540237, 1154485),
-    ("2025-12-22",  12684, 3.88215981178257e-7,   1156714),
-    ("2025-12-22",  54269, 0.002994692938594033,  1152365),
-    ("2025-12-22",     79, 0.0,                   1157794),
-    ("2025-12-22",     30, 0.0,                   1157820),
-    ("2025-12-22",    210, 0.0,                   1157789),
-    ("2025-12-22",    634, 0.0,                   1157739),
-    ("2025-12-22",   2819, 0.0,                   1157551),
-    ("2025-12-22",  14927, 0.00004147977129209595, 1156621),
-    ("2025-12-22",    161, 0.0,                   1157878),
-    ("2025-12-22",  16947, 0.0002537927221318451, 1156504),
-    ("2025-12-22",    517, 0.0,                   1157903),
-    ("2025-12-22",  21335, 0.00013826066226054124, 1156132),
-    ("2025-12-22", 107156, 0.011724943227399393,  1147314),
-    ("2025-12-22",  19432, 0.00045438423329424715, 1156350),
-    ("2025-12-22",  12410, 0.000010103598034638014, 1157058),
-    ("2025-12-22",   2438, 0.000639084361463617,  1158010),
-    # Dec 23 — 9 positions (the outlier day)
-    ("2025-12-23",     26, 2.2375317186758686e-11, 1158459),
-    ("2025-12-23",    119, 0.0,                   1158465),
-    ("2025-12-23",  35887, 0.005883087382129902,  1154959),
-    ("2025-12-23",     46, 0.0,                   1158576),
-    ("2025-12-23", 219247, 0.0014945939118487055, 1137176),
-    ("2025-12-23",   5582, 0.000008987223913667591, 1158307),
-    ("2025-12-23",     14, 0.0,                   1158966),
-    ("2025-12-23",      8, 0.0,                   1159016),
-    ("2025-12-23", 266422, 0.0033954491365946874, 1131306),
-    # Dec 24 — 2 positions
-    ("2025-12-24", 285970, 0.013348553601300932,  1129486),
-    ("2025-12-24",  14279, 0.0020771904832717755, 1157657),
+PER_POSITION_DATA: tuple[tuple[str, int, float, int], ...] = tuple(
+    (str(r[0]), int(r[1]), float(r[2]), int(r[3])) for r in _ppd["data"]
 )
-# fmt: on

@@ -5,65 +5,94 @@ import {IReactive} from "reactive-lib/interfaces/IReactive.sol";
 import {ISubscriptionService} from "reactive-lib/interfaces/ISubscriptionService.sol";
 import {coverDebt, depositToSystem} from "reactive-hooks/modules/DebtMod.sol";
 import {SYSTEM_CONTRACT} from "reactive-hooks/libraries/DebtLib.sol";
-import {requireVM} from "reactive-hooks/modules/ReactVMMod.sol";
-import {isReactiveVm, isActive} from "reactive-hooks/types/ReactVM.sol";
-import {
-    reactiveNetworkBatchSubscription,
-    reactVMBatchSubscription, reactVMBatchUnsubscription
-} from "reactive-hooks/libraries/SubscriptionLib.sol";
-import {
-    POOL_REGISTERED_SIG, POOL_UNREGISTERED_SIG,
-    selfSyncSigs, v3PoolSigs
-} from "./libraries/EventSignatures.sol";
-import {
-    isSelfSync, topic0, logChainId
-} from "reactive-hooks/types/LogRecordExtMod.sol";
+import {REACTIVE_IGNORE} from "reactive-hooks/libraries/SubscriptionLib.sol";
+import {V3_SWAP_SIG, V3_MINT_SIG, V3_BURN_SIG} from "./libraries/EventSignatures.sol";
 import {mutateV3Payload} from "./libraries/UniswapV3PayloadMutatorLib.sol";
+import {initOwner, requireOwner, transferOwnership as _transferOwnership} from "../../modules/dependencies/LibOwner.sol";
+import {migrateFunds as _migrateFunds} from "../../modules/dependencies/AdminLib.sol";
 
 uint64 constant CALLBACK_GAS_LIMIT = 1_000_000;
 
 /// @title UniswapV3Reactive
 /// @dev Reactive Network contract for V3 reactive integration.
-/// Dual-instance: RN subscribes to self-sync, ReactVM auto-subscribes to V3 pools
-/// when PoolRegistered is received, then forwards raw event data to UniswapV3Callback.
+/// Dual-instance: RN manages subscriptions, ReactVM processes events.
+/// V1-proven pattern: bool immutable vm, explicit registerPool, direct subscribe.
 contract UniswapV3Reactive {
-    address immutable callback;
+    address public callback;
     ISubscriptionService immutable service;
+    bool immutable vm;
+
+    error ZeroAddress();
+    error OnlyReactVM();
+    error OnlyRN();
+
+    event CallbackUpdated(address indexed oldCallback, address indexed newCallback);
 
     constructor(address callback_) payable {
+        initOwner(msg.sender);
         callback = callback_;
         service = ISubscriptionService(SYSTEM_CONTRACT);
 
-        if (!isActive(isReactiveVm())) {
-            reactiveNetworkBatchSubscription(service, address(this), selfSyncSigs());
+        uint256 size;
+        assembly { size := extcodesize(0x0000000000000000000000000000000000fffFfF) }
+        vm = size == 0;
+
+        if (!vm) {
             depositToSystem(address(this));
         }
     }
 
     function react(IReactive.LogRecord calldata log) external {
-        requireVM();
+        if (!vm) revert OnlyReactVM();
 
-        if (isSelfSync(log, address(this))) {
-            uint256 sig = topic0(log);
-            uint256 chainId_ = log.topic_1;
-            address pool = address(uint160(log.topic_2));
-
-            if (sig == POOL_REGISTERED_SIG) {
-                reactVMBatchSubscription(service, chainId_, pool, v3PoolSigs());
-            } else if (sig == POOL_UNREGISTERED_SIG) {
-                reactVMBatchUnsubscription(service, chainId_, pool, v3PoolSigs());
-            }
-            return;
+        // Zero-burn skip: V3 burnPosition() emits liq=0 then full burn.
+        if (log.topic_0 == V3_BURN_SIG) {
+            (uint128 burnedLiq,,) = abi.decode(log.data, (uint128, uint256, uint256));
+            if (burnedLiq == 0) return;
         }
 
         emit IReactive.Callback(
-            logChainId(log), callback, CALLBACK_GAS_LIMIT,
+            log.chain_id, callback, CALLBACK_GAS_LIMIT,
             abi.encodeWithSignature(
                 "unlockCallbackReactive(address,bytes)",
                 address(0),
                 mutateV3Payload(log)
             )
         );
+    }
+
+    function registerPool(uint256 chainId_, address pool) external {
+        requireOwner();
+        if (vm) revert OnlyRN();
+        service.subscribe(chainId_, pool, V3_SWAP_SIG, REACTIVE_IGNORE, REACTIVE_IGNORE, REACTIVE_IGNORE);
+        service.subscribe(chainId_, pool, V3_MINT_SIG, REACTIVE_IGNORE, REACTIVE_IGNORE, REACTIVE_IGNORE);
+        service.subscribe(chainId_, pool, V3_BURN_SIG, REACTIVE_IGNORE, REACTIVE_IGNORE, REACTIVE_IGNORE);
+    }
+
+    function unregisterPool(uint256 chainId_, address pool) external {
+        requireOwner();
+        if (vm) revert OnlyRN();
+        service.unsubscribe(chainId_, pool, V3_SWAP_SIG, REACTIVE_IGNORE, REACTIVE_IGNORE, REACTIVE_IGNORE);
+        service.unsubscribe(chainId_, pool, V3_MINT_SIG, REACTIVE_IGNORE, REACTIVE_IGNORE, REACTIVE_IGNORE);
+        service.unsubscribe(chainId_, pool, V3_BURN_SIG, REACTIVE_IGNORE, REACTIVE_IGNORE, REACTIVE_IGNORE);
+    }
+
+    function setCallback(address newCallback) external {
+        requireOwner();
+        if (newCallback == address(0)) revert ZeroAddress();
+        address oldCallback = callback;
+        callback = newCallback;
+        emit CallbackUpdated(oldCallback, newCallback);
+    }
+
+    function migrateFunds(address payable to) external {
+        requireOwner();
+        _migrateFunds(to, address(this).balance);
+    }
+
+    function transferOwnership(address newOwner) external {
+        requireOwner();
+        _transferOwnership(newOwner);
     }
 
     function fund() external payable {

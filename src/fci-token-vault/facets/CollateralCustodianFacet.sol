@@ -16,6 +16,10 @@ import {
     reentrancyGuardEnter,
     reentrancyGuardExit
 } from "@fci-token-vault/modules/dependencies/ReentrancyLib.sol";
+import {
+    getOraclePayoffStorage,
+    VaultAlreadySettled
+} from "@fci-token-vault/storage/OraclePayoffStorage.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
 /// @title CollateralCustodianFacet — permanent diamond facet
@@ -28,6 +32,7 @@ contract CollateralCustodianFacet {
     /// CEI: transfer USDC in → update state → mint tokens.
     function deposit(uint256 amount) external {
         reentrancyGuardEnter();
+        if (getOraclePayoffStorage().settled) revert VaultAlreadySettled();
 
         CustodianStorage storage cs = getCustodianStorage();
 

@@ -9,6 +9,7 @@ import {TickRange} from "typed-uniswap-v4/types/TickRangeMod.sol";
 import {SwapCount} from "typed-uniswap-v4/types/SwapCountMod.sol";
 import {BlockCount} from "typed-uniswap-v4/types/BlockCountMod.sol";
 import {LiquidityPositionSnapshot} from "@fee-concentration-index-v2/types/LiquidityPositionSnapshot.sol";
+import {RangeSnapshot} from "@fee-concentration-index-v2/types/RangeSnapshot.sol";
 
 /// @title IFCIProtocolFacet
 /// @dev Extends IHooks with protocol-specific behavioral functions.
@@ -50,4 +51,12 @@ interface IFCIProtocolFacet is IHooks {
     // ── FCI state accumulation ──
     function addStateTerm(bytes calldata hookData, PoolId poolId, BlockCount blockLifetime, uint256 xSquaredQ128) external;
     function addEpochTerm(bytes calldata hookData, PoolId poolId, BlockCount blockLifetime, uint256 xSquaredQ128) external;
+
+    // ── Registry reads (metrics facet support) ──
+    function getRegistryRangeSnapshot(bytes2 flags, PoolId poolId, TickRange rk) external view returns (RangeSnapshot memory);
+    function getRegistryActiveRanges(bytes2 flags, PoolId poolId) external view returns (TickRange[] memory);
+    function getRegistryAllSnapshots(bytes2 flags, PoolId poolId) external view returns (RangeSnapshot[] memory);
+    function getRegistryPositionBaseline(bytes2 flags, PoolId poolId, bytes32 posKey) external view returns (uint256);
+    function getRegistryPositionAddBlock(bytes2 flags, PoolId poolId, bytes32 posKey) external view returns (uint256);
+    function getRegistryPositionSwapLifetime(bytes2 flags, PoolId poolId, bytes32 posKey) external view returns (uint256);
 }

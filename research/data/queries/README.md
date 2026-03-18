@@ -35,4 +35,23 @@ dune/6783604-daily-at-per-position.sql
 
 **Subgraph:** Requires `GRAPH_API_KEY` env var. Free tier sufficient.
 
-**Dune:** Requires Dune API key. Total reproduction cost: **~4.7 credits** (3.1 for 10× cross-pool + 1.57 for daily A_T). Results are frozen in `econometrics/data.py` and `econometrics/cross_pool/data.py` — re-execution will produce different results due to new on-chain activity since the data freeze date (2026-03-05). Costs verified 2026-03-05.
+**Dune:** Requires Dune API key. Total reproduction cost: **~5 credits** (3.1 for 10× cross-pool + 1.57 for daily A_T + ~0.3 for per-position fees). Results are frozen in `econometrics/data.py` and `econometrics/cross_pool/data.py` — re-execution will produce different results due to new on-chain activity since the data freeze date (2026-03-05). Costs verified 2026-03-05.
+
+## Frozen Data
+
+Canonical JSON snapshots of all datasets live in `data/frozen/`. Each file has a `metadata` + `data` structure; SHA-256 is computed over the canonicalized `data` field only (sorted keys, no whitespace). See `data/frozen/README.md` for the full format description.
+
+To verify all hashes: `uhi8/bin/python research/data/scripts/verify_provenance.py`
+
+### Query ID Reference
+
+| Dataset | Dune Query ID | Status |
+|---------|--------------|--------|
+| DAILY_AT_MAP + DAILY_AT_NULL_MAP | 6783604 | Verified |
+| POOL_CONCENTRATIONS | 6784588 | Parameterized ×10 |
+| PER_POSITION_DATA | 6815916 | Verified |
+| FCI V4 events | 6795594 | Verified |
+| RAW_POSITIONS (reconstruction) | 6847717 | Directional match |
+| RAW_POSITIONS (original Q4v2) | Unknown | Lost |
+| IL_MAP | N/A | Derived |
+| SELECTED_POOLS | N/A | GraphQL subgraph |

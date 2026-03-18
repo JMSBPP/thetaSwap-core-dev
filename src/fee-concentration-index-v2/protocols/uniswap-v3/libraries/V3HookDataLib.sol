@@ -24,12 +24,19 @@ function encodeAfterSwap(address pool, int24 tickBefore) pure returns (bytes mem
     return abi.encodePacked(UNISWAP_V3_REACTIVE, pool, AFTER_SWAP, tickBefore);
 }
 
-function encodeBeforeRemoveLiquidity(address pool) pure returns (bytes memory) {
-    return abi.encodePacked(UNISWAP_V3_REACTIVE, pool, BEFORE_REMOVE_LIQUIDITY);
+// hookData layout for burns: FLAG (2) | pool (20) | action (1) | posLiqBefore (16) = 39 bytes
+
+function encodeBeforeRemoveLiquidity(address pool, uint128 posLiqBefore) pure returns (bytes memory) {
+    return abi.encodePacked(UNISWAP_V3_REACTIVE, pool, BEFORE_REMOVE_LIQUIDITY, posLiqBefore);
 }
 
-function encodeAfterRemoveLiquidity(address pool) pure returns (bytes memory) {
-    return abi.encodePacked(UNISWAP_V3_REACTIVE, pool, AFTER_REMOVE_LIQUIDITY);
+function encodeAfterRemoveLiquidity(address pool, uint128 posLiqBefore) pure returns (bytes memory) {
+    return abi.encodePacked(UNISWAP_V3_REACTIVE, pool, AFTER_REMOVE_LIQUIDITY, posLiqBefore);
+}
+
+/// @dev Decode posLiqBefore from burn hookData at byte offset 23 (after flag+pool+action).
+function decodePosLiqBefore(bytes calldata hookData) pure returns (uint128 posLiqBefore) {
+    assembly { posLiqBefore := shr(128, calldataload(add(hookData.offset, 23))) }
 }
 
 // ── Common decoders (header) ──

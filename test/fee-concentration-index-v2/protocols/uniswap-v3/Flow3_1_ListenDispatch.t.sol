@@ -21,7 +21,7 @@ import {encodeV3PoolAddedData} from
 import {V3_SWAP_SIG, V3_MINT_SIG, V3_BURN_SIG} from
     "@fee-concentration-index-v2/protocols/uniswap-v3/libraries/EventSignatures.sol";
 import {POOL_ADDED_SIG} from "@fee-concentration-index-v2/libraries/PoolAddedSig.sol";
-import {UNISWAP_V3} from "@fee-concentration-index-v2/types/FlagsRegistry.sol";
+import {UNISWAP_V3_REACTIVE} from "@fee-concentration-index-v2/types/FlagsRegistry.sol";
 import {OriginEndpoint, originId} from "reactive-hooks/types/OriginEndpoint.sol";
 
 // Test mock
@@ -113,7 +113,7 @@ contract Flow3_1_ListenDispatch is Test {
         address callbackTarget
     ) internal pure returns (IReactive.LogRecord memory) {
         bytes memory poolData = encodeV3PoolAddedData(chainId, pool, pool);
-        bytes memory logData = abi.encode(UNISWAP_V3, poolData);
+        bytes memory logData = abi.encode(UNISWAP_V3_REACTIVE, poolData);
 
         return IReactive.LogRecord({
             chain_id: chainId,

@@ -1,37 +1,65 @@
-.PHONY: install test-sol test-py test notebooks clean
+.PHONY: build install setup-kernel test notebooks verify-data clean \
+       show-build sol-test sol-test-demo test-py
+
+VENV := uhi8
+PYTHON := $(VENV)/bin/python
+JUPYTER := $(VENV)/bin/jupyter
+PYTEST := $(VENV)/bin/pytest
+
+# ── Build (full pipeline: install → verify → notebooks) ──────────────
+build: install verify-data test notebooks
 
 # ── Setup ────────────────────────────────────────────────────────────
 install:
 	git submodule update --init --recursive
-	python3 -m venv .venv
-	.venv/bin/pip install -e ".[dev]"
-	.venv/bin/python -m ipykernel install --user --name=thetaswap \
-		--env PYTHONPATH "$(CURDIR)/research"
+	uv venv $(VENV) --python 3.13
+	uv pip install --python $(PYTHON) -e ".[dev]"
+	$(MAKE) setup-kernel
 
-# ── Solidity ─────────────────────────────────────────────────────────
-test-sol:
-	forge build
-	forge test
+setup-kernel:
+	$(PYTHON) -m ipykernel install --user --name=thetaswap \
+		--display-name "thetaswap" \
+		--env PYTHONPATH "$(CURDIR)/research"
+	@echo "Kernel 'thetaswap' installed. PYTHONPATH=$(CURDIR)/research"
+
+# ── Solidity ──────────────────────────────────────────────────────────
+show-build:
+	FOUNDRY_PROFILE=lite forge build --no-cache --threads 6
+
+sol-test:
+	forge test --no-cache --match-path "test/fci-token-vault/**" -vv
+	forge test --no-cache --match-path "test/fee-concentration-index-v2/**" -vv
+
+sol-test-demo:
+	forge test --no-cache --match-path "test/fee-concentration-index-v2/protocols/uniswapV4/*" -vvvv
 
 # ── Python ───────────────────────────────────────────────────────────
 test-py:
-	PYTHONPATH=research .venv/bin/pytest research/tests -v
+	cd research && ../$(PYTEST) tests/ -v
 
-# ── All tests ────────────────────────────────────────────────────────
-test: test-sol test-py
+test: test-py
 
 # ── Notebooks (headless execute) ─────────────────────────────────────
-notebooks:
-	@for nb in research/notebooks/*.ipynb; do \
+notebooks: setup-kernel
+	@tmpdir=$$(mktemp -d); \
+	for nb in research/notebooks/*.ipynb; do \
 		echo "Executing $$nb ..."; \
-		PYTHONPATH=research .venv/bin/jupyter nbconvert \
+		PYTHONPATH=research $(JUPYTER) nbconvert \
 			--to notebook --execute \
 			--ExecutePreprocessor.timeout=300 \
 			--ExecutePreprocessor.kernel_name=thetaswap \
-			"$$nb" --output /dev/null; \
-	done
+			--output-dir="$$tmpdir" \
+			"$$nb"; \
+	done; \
+	rm -rf "$$tmpdir"
 	@echo "All notebooks passed."
+
+# ── Data provenance ──────────────────────────────────────────────────
+verify-data:
+	$(PYTHON) research/data/scripts/verify_provenance.py
 
 # ── Clean ────────────────────────────────────────────────────────────
 clean:
-	rm -rf out/ cache/
+	find research -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+	find research -type f -name "*.pyc" -delete 2>/dev/null || true
+	rm -rf research/.pytest_cache

@@ -32,7 +32,9 @@ import {sortTicks} from "@libraries/HookUtilsMod.sol";
 import {LibCall} from "solady/utils/LibCall.sol";
 import {requireOwner, initOwner} from "@fee-concentration-index-v2/modules/dependencies/LibOwner.sol";
 import {LiquidityPositionSnapshot} from "@fee-concentration-index-v2/types/LiquidityPositionSnapshot.sol";
+import {RangeSnapshot} from "@fee-concentration-index-v2/types/RangeSnapshot.sol";
 import {PositionConfig} from "@uniswap/v4-periphery/src/libraries/PositionConfig.sol";
+import {thetaWeight} from "@types/BlockCountExt.sol";
 
 // Fee Concentration Index V2 — Protocol-agnostic orchestrator.
 // Hook flow (algorithm) lives here. Protocol-specific behavior is delegatecalled
@@ -40,6 +42,17 @@ import {PositionConfig} from "@uniswap/v4-periphery/src/libraries/PositionConfig
 // NATIVE_V4 (0xFFFF) is a registered facet like any other protocol.
 
 contract FeeConcentrationIndexV2 {
+
+    event FCITermAccumulated(
+        PoolId indexed poolId,
+        bytes2 indexed protocolFlags,
+        bytes32 indexed posKey,
+        uint128 xk,
+        uint256 xSquaredQ128,
+        uint256 thetaK,
+        uint256 blockLifetime,
+        uint256 swapLifetime
+    );
 
     // ── afterAddLiquidity ──
 
@@ -173,6 +186,7 @@ contract FeeConcentrationIndexV2 {
         );
 
         // 2. latestPositionFeeGrowthInside
+        // For V3 reactive: facet overrides posLiquidity from hookData (posLiqBefore from ReactVM shadow).
         (uint128 posLiquidity, uint256 feeLast0) = abi.decode(
             LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.latestPositionFeeGrowthInside, (hookData, poolId, posKey))),
             (uint128, uint256)
@@ -255,6 +269,17 @@ contract FeeConcentrationIndexV2 {
             );
             uint256 xSquaredQ128 = xk.square();
 
+            emit FCITermAccumulated(
+                poolId,
+                protocolFlags,
+                posKey,
+                xk.unwrap(),
+                xSquaredQ128,
+                thetaWeight(blockLifetime),
+                BlockCount.unwrap(blockLifetime),
+                SwapCount.unwrap(swapLifetime)
+            );
+
             // 6. addStateTerm
             LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.addStateTerm, (hookData, poolId, blockLifetime, xSquaredQ128)));
 
@@ -307,6 +332,17 @@ contract FeeConcentrationIndexV2 {
         initOwner(_owner);
     }
 
+    /// @notice Initialize epoch metric for a pool on FCI V2's storage.
+    /// @dev Must be called on FCI V2 (not the facet) so epoch storage
+    ///      lives in the same context as addEpochTerm (delegatecall).
+    function initializeEpochPool(PoolKey calldata key, bytes2 flags, uint256 epochLengthSeconds) external {
+        requireOwner();
+        PoolId poolId = PoolIdLibrary.toId(key);
+        FeeConcentrationEpochStorage storage $ = protocolEpochFciStorage(flags);
+        $.epochLength[poolId] = epochLengthSeconds;
+        $.currentEpochId[poolId] = block.timestamp;
+    }
+
     // ── Facet admin storage (writes to V2's storage context for delegatecall reads) ──
 
     function setFacetFci(bytes2 flags, IFeeConcentrationIndex fci) external {
@@ -328,6 +364,53 @@ contract FeeConcentrationIndexV2 {
 
     function getRegisteredProtocolFacet(bytes2 flags) external view returns (IFCIProtocolFacet) {
         return getProtocolFacet(flags);
+    }
+
+    // ── Registry reads (delegated to facet via delegatecall) ──
+
+    function getRegistryAllSnapshots(PoolKey calldata key, bytes2 flags) external returns (RangeSnapshot[] memory) {
+        address facet_ = address(getProtocolFacet(flags));
+        PoolId poolId = PoolIdLibrary.toId(key);
+        return abi.decode(
+            LibCall.delegateCallContract(facet_, abi.encodeCall(IFCIProtocolFacet.getRegistryAllSnapshots, (flags, poolId))),
+            (RangeSnapshot[])
+        );
+    }
+
+    function getRegistryActiveRanges(PoolKey calldata key, bytes2 flags) external returns (TickRange[] memory) {
+        address facet_ = address(getProtocolFacet(flags));
+        PoolId poolId = PoolIdLibrary.toId(key);
+        return abi.decode(
+            LibCall.delegateCallContract(facet_, abi.encodeCall(IFCIProtocolFacet.getRegistryActiveRanges, (flags, poolId))),
+            (TickRange[])
+        );
+    }
+
+    function getRegistryPositionBaseline(PoolKey calldata key, bytes2 flags, bytes32 posKey) external returns (uint256) {
+        address facet_ = address(getProtocolFacet(flags));
+        PoolId poolId = PoolIdLibrary.toId(key);
+        return abi.decode(
+            LibCall.delegateCallContract(facet_, abi.encodeCall(IFCIProtocolFacet.getRegistryPositionBaseline, (flags, poolId, posKey))),
+            (uint256)
+        );
+    }
+
+    function getRegistryPositionAddBlock(PoolKey calldata key, bytes2 flags, bytes32 posKey) external returns (uint256) {
+        address facet_ = address(getProtocolFacet(flags));
+        PoolId poolId = PoolIdLibrary.toId(key);
+        return abi.decode(
+            LibCall.delegateCallContract(facet_, abi.encodeCall(IFCIProtocolFacet.getRegistryPositionAddBlock, (flags, poolId, posKey))),
+            (uint256)
+        );
+    }
+
+    function getRegistryPositionSwapLifetime(PoolKey calldata key, bytes2 flags, bytes32 posKey) external returns (uint256) {
+        address facet_ = address(getProtocolFacet(flags));
+        PoolId poolId = PoolIdLibrary.toId(key);
+        return abi.decode(
+            LibCall.delegateCallContract(facet_, abi.encodeCall(IFCIProtocolFacet.getRegistryPositionSwapLifetime, (flags, poolId, posKey))),
+            (uint256)
+        );
     }
 
     // ── IERC165 ──

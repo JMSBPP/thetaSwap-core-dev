@@ -9,11 +9,16 @@ import {TickRange, fromTicksPacked, intersects} from "typed-uniswap-v4/types/Tic
 import {SwapCount} from "typed-uniswap-v4/types/SwapCountMod.sol";
 import {BlockCount} from "typed-uniswap-v4/types/BlockCountMod.sol";
 import {LiquidityPositionSnapshot} from "@fee-concentration-index-v2/types/LiquidityPositionSnapshot.sol";
+import {RangeSnapshot} from "@fee-concentration-index-v2/types/RangeSnapshot.sol";
 import {UNISWAP_V3_REACTIVE} from "@fee-concentration-index-v2/types/FlagsRegistry.sol";
 import {IFeeConcentrationIndex} from "@fee-concentration-index/interfaces/IFeeConcentrationIndex.sol";
 import {IProtocolStateView} from "@protocol-adapter/interfaces/IProtocolStateView.sol";
+import {IUnlockCallback} from "v4-core/src/interfaces/callback/IUnlockCallback.sol";
 import {
-    fciFacetAdminStorage, addPool, setProtocolStateView as _setProtocolStateView, setFci as _setFci
+    fciFacetAdminStorage, addPool,
+    setProtocolStateView as _setProtocolStateView,
+    setFci as _setFci,
+    setProtocolCallback as _setProtocolCallback
 } from "@fee-concentration-index-v2/modules/FCIFacetAdminStorageMod.sol";
 import {
     FeeConcentrationIndexV2Storage
@@ -28,7 +33,8 @@ import {
 import {FeeConcentrationEpochStorage} from "@fee-concentration-index/modules/FeeConcentrationEpochStorageMod.sol";
 import {requireOwner, initOwner} from "@fee-concentration-index-v2/modules/dependencies/LibOwner.sol";
 import {fromUniswapV3PoolToPoolKey} from "./libraries/UniswapV3PoolKeyLib.sol";
-import {decodePoolAddress, decodeActionType, decodeSwapTick} from "./libraries/V3HookDataLib.sol";
+import {encodeV3PoolAddedData} from "./libraries/UniswapV3PoolAddedLib.sol";
+import {decodePoolAddress, decodeActionType, decodeSwapTick, decodePosLiqBefore} from "./libraries/V3HookDataLib.sol";
 import {BEFORE_SWAP} from "./libraries/V3ActionTypes.sol";
 import {IUniswapV3Pool} from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
@@ -53,13 +59,14 @@ contract UniswapV3Facet {
 
     // ── Admin (direct call, NOT delegatecall) ──
 
-    event PoolAdded(address indexed facet, address indexed callback, PoolId indexed poolId, bytes2 protocolFlag);
+    event PoolAdded(address indexed facet, address indexed callback, PoolId indexed poolId, bytes2 protocolFlag, bytes data);
     error PoolAlreadyRegistered(PoolId poolId);
 
-    function initialize(address _owner, IProtocolStateView _protocolStateView, IFeeConcentrationIndex _fci) external {
+    function initialize(address _owner, IProtocolStateView _protocolStateView, IFeeConcentrationIndex _fci, IUnlockCallback _callback) external {
         initOwner(_owner);
         _setProtocolStateView(UNISWAP_V3_REACTIVE, _protocolStateView);
         _setFci(UNISWAP_V3_REACTIVE, _fci);
+        _setProtocolCallback(UNISWAP_V3_REACTIVE, _callback);
     }
 
     /// @notice Register a V3 pool for FCI tracking.
@@ -70,7 +77,17 @@ contract UniswapV3Facet {
         poolKey = fromUniswapV3PoolToPoolKey(v3Pool, fciHook);
         PoolId poolId = PoolIdLibrary.toId(poolKey);
         addPool(UNISWAP_V3_REACTIVE, poolId);
-        emit PoolAdded(address(this), address(fciFacetAdminStorage(UNISWAP_V3_REACTIVE).fci), poolId, UNISWAP_V3_REACTIVE);
+
+        // NOTE: Epoch init must be called on FCI V2 (not facet) via
+        // fci.initializeEpochPool(key, UNISWAP_V3_REACTIVE, 86400)
+
+        emit PoolAdded(
+            address(this),
+            address(fciFacetAdminStorage(UNISWAP_V3_REACTIVE).protocolCallback),
+            poolId,
+            UNISWAP_V3_REACTIVE,
+            encodeV3PoolAddedData(block.chainid, address(v3Pool), address(v3Pool))
+        );
     }
 
     function setProtocolStateView(IProtocolStateView stateView) external {
@@ -86,9 +103,21 @@ contract UniswapV3Facet {
 
     // ── Fee growth reads ──
 
-    function latestPositionFeeGrowthInside(bytes calldata hookData, PoolId, bytes32 posKey) external view onlyDelegateCall returns (uint128 posLiquidity, uint256 feeGrowthLast) {
+    function latestPositionFeeGrowthInside(bytes calldata hookData, PoolId poolId, bytes32 posKey) external view onlyDelegateCall returns (uint128 posLiquidity, uint256 feeGrowthLast) {
         address pool = decodePoolAddress(hookData);
         (posLiquidity, feeGrowthLast,,,) = IUniswapV3Pool(pool).positions(posKey);
+
+        // V3 reactive burn path: hookData carries posLiqBefore from ReactVM shadow.
+        // V1 approach: x_k = posLiq / totalRangeLiq (exact for V3 — fees are per-unit-of-liq).
+        // Set feeGrowthLast = 0; combined with getFeeGrowthBaseline returning 0,
+        // fromFeeGrowthDelta reduces to feeRatio=1 × posLiq/totalRangeLiq.
+        if (hookData.length >= 39) {
+            uint128 posLiqOverride = decodePosLiqBefore(hookData);
+            if (posLiqOverride > 0) {
+                posLiquidity = posLiqOverride;
+                feeGrowthLast = 0;
+            }
+        }
     }
 
     function poolRangeFeeGrowthInside(bytes calldata hookData, PoolId, int24 currentTick_, TickRange tickRange) external view onlyDelegateCall returns (uint256 feeGrowthInside0X128) {
@@ -145,7 +174,12 @@ contract UniswapV3Facet {
         protocolFciStorage(UNISWAP_V3_REACTIVE).feeGrowthBaseline0[poolId][posKey] = feeGrowth;
     }
 
-    function getFeeGrowthBaseline(bytes calldata, PoolId poolId, bytes32 posKey) external view onlyDelegateCall returns (uint256) {
+    function getFeeGrowthBaseline(bytes calldata hookData, PoolId poolId, bytes32 posKey) external view onlyDelegateCall returns (uint256) {
+        // V3 reactive burn path: return 0 so fromFeeGrowthDelta reduces to posLiq/totalRangeLiq.
+        if (hookData.length >= 39) {
+            uint128 posLiqOverride = decodePosLiqBefore(hookData);
+            if (posLiqOverride > 0) return 0;
+        }
         return protocolFciStorage(UNISWAP_V3_REACTIVE).feeGrowthBaseline0[poolId][posKey];
     }
 
@@ -216,5 +250,55 @@ contract UniswapV3Facet {
         }
 
         $.epochStates[poolId][epochId].addTerm(blockLifetime, xSquaredQ128);
+    }
+
+    // ── Registry reads (metrics facet support) ──
+
+    function getRegistryRangeSnapshot(bytes2, PoolId poolId, TickRange rk) external view returns (RangeSnapshot memory snapshot) {
+        FeeConcentrationIndexV2Storage storage $ = protocolFciStorage(UNISWAP_V3_REACTIVE);
+        bytes32 rkRaw = TickRange.unwrap(rk);
+        snapshot.tickLower = rk.lowerTick();
+        snapshot.tickUpper = rk.upperTick();
+        snapshot.totalLiquidity = $.registries[poolId].totalRangeLiquidity[rkRaw];
+        snapshot.swapCount = SwapCount.unwrap($.registries[poolId].rangeSwapCount[rkRaw]);
+        snapshot.positionKeys = $.registries[poolId].positionsInRange(rk);
+        snapshot.positionCount = snapshot.positionKeys.length;
+    }
+
+    function getRegistryActiveRanges(bytes2, PoolId poolId) external view returns (TickRange[] memory ranges) {
+        FeeConcentrationIndexV2Storage storage $ = protocolFciStorage(UNISWAP_V3_REACTIVE);
+        uint256 count = $.registries[poolId].activeRangeCount();
+        ranges = new TickRange[](count);
+        for (uint256 i; i < count; ++i) {
+            ranges[i] = TickRange.wrap($.registries[poolId].activeRangeAt(i));
+        }
+    }
+
+    function getRegistryAllSnapshots(bytes2, PoolId poolId) external view returns (RangeSnapshot[] memory snapshots) {
+        FeeConcentrationIndexV2Storage storage $ = protocolFciStorage(UNISWAP_V3_REACTIVE);
+        uint256 count = $.registries[poolId].activeRangeCount();
+        snapshots = new RangeSnapshot[](count);
+        for (uint256 i; i < count; ++i) {
+            TickRange rk = TickRange.wrap($.registries[poolId].activeRangeAt(i));
+            bytes32 rkRaw = TickRange.unwrap(rk);
+            snapshots[i].tickLower = rk.lowerTick();
+            snapshots[i].tickUpper = rk.upperTick();
+            snapshots[i].totalLiquidity = $.registries[poolId].totalRangeLiquidity[rkRaw];
+            snapshots[i].swapCount = SwapCount.unwrap($.registries[poolId].rangeSwapCount[rkRaw]);
+            snapshots[i].positionKeys = $.registries[poolId].positionsInRange(rk);
+            snapshots[i].positionCount = snapshots[i].positionKeys.length;
+        }
+    }
+
+    function getRegistryPositionBaseline(bytes2, PoolId poolId, bytes32 posKey) external view returns (uint256) {
+        return protocolFciStorage(UNISWAP_V3_REACTIVE).feeGrowthBaseline0[poolId][posKey];
+    }
+
+    function getRegistryPositionAddBlock(bytes2, PoolId poolId, bytes32 posKey) external view returns (uint256) {
+        return protocolFciStorage(UNISWAP_V3_REACTIVE).registries[poolId].positionAddBlock[posKey];
+    }
+
+    function getRegistryPositionSwapLifetime(bytes2, PoolId poolId, bytes32 posKey) external view returns (uint256) {
+        return SwapCount.unwrap(protocolFciStorage(UNISWAP_V3_REACTIVE).registries[poolId].getLifetime(posKey));
     }
 }

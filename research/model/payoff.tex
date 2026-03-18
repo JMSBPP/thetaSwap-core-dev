@@ -12,16 +12,17 @@ in liquidity provision. It is the \emph{primary} computed and tracked quantity:
 \end{equation}
 where the sum runs over all positions removed up to observation time $T$, and:
 \begin{itemize}
-  \item $x_k = \dfrac{\text{feeGrowthInside}(\text{position}_k, \text{tickRange})}%
-                     {\text{feeGrowth}(\text{tickRange})}$
-        is the fee share captured by position $k$;
-  \item $\thetapos_k = \dfrac{1}{\blocklife_k}$
-        is the sophistication weight, where $\blocklife_k = \text{block}(\text{removal}) - \text{block}(\text{creation})$
+  \item $x_k = \dfrac{\ell_k}{L(p^*)}$
+        is the fee share captured by position $k$, where $\ell_k$ is the
+        position's liquidity and $L(p^*)$ is the total liquidity in the
+        active tick range;
+  \item $\thetapos_k = \dfrac{1}{\Delta B_k}$
+        is the sophistication weight, where $\Delta B_k = \text{block}(\text{removal}) - \text{block}(\text{creation})$
         is the position lifetime in blocks;
-  \item $\thetapos_k = 1$ for JIT positions ($\blocklife_k = 1$ block: same-block add and remove).
+  \item $\thetapos_k = 1$ for JIT positions ($\Delta B_k = 1$ block: same-block add and remove).
 \end{itemize}
 
-The index satisfies $\AT \in [0,1]$ and updates at every \texttt{afterRemoveLiquidity} event.
+The index satisfies $\AT \in [0,1]$.
 
 \subsection{Co-Primary State Variables}
 
@@ -40,16 +41,7 @@ All three are stored on-chain. The derived quantities $\ATnull$ and $\DeltaPlus$
 are computed on the fly from these three values.
 \end{definition}
 
-\begin{remark}[Gas Cost]
-Each liquidity event requires 2 SSTOREs ($\ThetaSum$ and $\PosCount$) plus one
-\texttt{sqrt} computation for $\ATnull$. Approximate cost: $\sim$10.2K gas per event.
-$\AT$ is already tracked in the existing hook; $\ThetaSum$ and $\PosCount$ are additive
-accumulators updated at the same point.
-\end{remark}
-
-\subsection{Ma--Crapis Competitive Null: $\ATnull$}\label{subsec:null}
-
-The Ma--Crapis (2024) symmetric equilibrium assumes all positions capture equal fee shares
+The Ma--Crapis \cite{macrapis2024permissionless} symmetric equilibrium assumes all positions capture equal fee shares
 $x_k = 1/\PosCount$. Under this null hypothesis:
 \begin{equation}\label{eq:null-at}
   \ATnull = \sqrt{\frac{\ThetaSum}{\PosCount^2}}
@@ -64,17 +56,14 @@ with equality if and only if $x_k = 1/\PosCount$ for all $k$.
 \end{proposition}
 
 \begin{proof}
-The Cauchy--Schwarz inequality gives $\sum_k \thetapos_k x_k^2 \geq
-(\sum_k \thetapos_k)(\sum_k x_k^2)/\PosCount$ ... actually, we prove this directly.
 
-Under equal shares $x_k = 1/\PosCount$:
+ Under equal shares $x_k = 1/\PosCount$:
 \[
   (\ATnull)^2 = \sum_k \thetapos_k \cdot \frac{1}{\PosCount^2}
              = \frac{\ThetaSum}{\PosCount^2}
 \]
 
-For arbitrary shares, by the power mean inequality (or Jensen's inequality on
-the convex function $x \mapsto x^2$):
+For arbitrary shares, by Jensen's inequality on the convex function $x \mapsto x^2$:
 \[
   \sum_k \thetapos_k x_k^2 \geq \frac{\ThetaSum}{\PosCount^2}
   \quad \text{when } \sum_k x_k = 1
@@ -99,14 +88,6 @@ By \cref{prop:null-lower-bound}, $\DeltaPlus \geq 0$ always.
 $\DeltaPlus = 0$ corresponds to the competitive equilibrium (all LPs earn equal fee shares).
 $\DeltaPlus > 0$ indicates excess concentration: a few LPs capture disproportionate fee revenue.
 
-\begin{remark}[On-Chain Computation]
-$\DeltaPlus$ is \emph{not} stored. It is derived on the fly:
-\begin{verbatim}
-uint256 atNull = sqrt(thetaSum * WAD / (posCount * posCount));
-uint256 deltaPlus = aT > atNull ? aT - atNull : 0;
-\end{verbatim}
-This avoids a third SSTORE and keeps the oracle stateless with respect to $\DeltaPlus$.
-\end{remark}
 
 \subsection{Price Mapping}\label{subsec:price-mapping}
 
@@ -126,14 +107,6 @@ $p(\DeltaPlus)$ is strictly increasing on $[0, 1)$.
 \begin{proof}
 $\dfrac{dp}{d\DeltaPlus} = \dfrac{1}{(1-\DeltaPlus)^2} > 0$ for all $\DeltaPlus < 1$. \qedhere
 \end{proof}
-
-\begin{remark}[Solidity Mapping to $\sqrt{P}$]
-For integration with Uniswap V4's \texttt{sqrtPriceX96} representation:
-\begin{verbatim}
-uint256 p = (deltaPlus * WAD) / (WAD - deltaPlus);
-uint160 sqrtPriceX96 = uint160(sqrt(p << 192));
-\end{verbatim}
-\end{remark}
 
 \section{Econometric Calibration}\label{sec:econometric}
 

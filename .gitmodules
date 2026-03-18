@@ -19,9 +19,6 @@
 [submodule "lib/angstrom"]
 	path = lib/angstrom
 	url = https://github.com/SorellaLabs/angstrom
-[submodule "lib/bunni-v2"]
-	path = lib/bunni-v2
-	url = https://github.com/Bunniapp/bunni-v2
 [submodule "lib/kontrol-cheatcodes"]
 	path = lib/kontrol-cheatcodes
 	url = https://github.com/runtimeverification/kontrol-cheatcodes
@@ -47,3 +44,13 @@
 [submodule "lib/foundry-devops"]
 	path = lib/foundry-devops
 	url = https://github.com/Cyfrin/foundry-devops.git
+[submodule "lib/reactive-hooks"]
+	path = lib/reactive-hooks
+	url = https://github.com/JMSBPP/reactive-hooks.git
+	branch = feat/subscription-lib-replace-mod
+[submodule "lib/typed-uniswap-v4"]
+	path = lib/typed-uniswap-v4
+	url = https://github.com/wvs-finance/typed-uniswap-v4.git
+[submodule "lib/reactive-lib"]
+	path = lib/reactive-lib
+	url = https://github.com/Reactive-Network/reactive-lib.git

@@ -1,5 +1,6 @@
 pub mod primary;
 pub mod fallback;
+pub mod verify;
 
 use std::path::PathBuf;
 

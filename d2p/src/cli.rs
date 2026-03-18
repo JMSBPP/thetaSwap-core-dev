@@ -28,7 +28,7 @@ pub enum TsCommands {
 }
 
 #[derive(Args)]
-#[command(long_about = "Deploy a reactive contract.\n\nExample:\n  d2p ts reactive uniswap-v3 \\\n    --rpc-url https://rpc.sepolia.org \\\n    --private-key $ETH_PRIVATE_KEY \\\n    --callback 0xcallback")]
+#[command(after_help = "Example:\n  d2p ts reactive uniswap-v3 \\\n    --rpc-url https://rpc.sepolia.org \\\n    --private-key $ETH_PRIVATE_KEY \\\n    --callback 0xcallback")]
 pub struct ReactiveArgs {
     /// Protocol to deploy (e.g. uniswap-v3)
     pub protocol: Protocol,
@@ -159,8 +159,8 @@ mod tests {
             Err(err) => {
                 let help_text = err.to_string();
                 assert!(
-                    help_text.contains("d2p ts reactive"),
-                    "help must contain 'd2p ts reactive'; got: {help_text}"
+                    help_text.contains("rpc.sepolia.org"),
+                    "help must contain example with 'rpc.sepolia.org'; got: {help_text}"
                 );
             }
         }

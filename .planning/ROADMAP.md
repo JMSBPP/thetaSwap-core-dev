@@ -41,10 +41,10 @@ Plans:
   1. Context diagram shows FCI Hook, Vault, CFMM, Protocol Adapters (V3, V4), and Reactive Network with their relationships
   2. Sequence diagram traces the full pool listening flow from listenPool() through swap/mint/burn events to metric update and DeltaPlus derivation
   3. Both diagrams render correctly when viewed on GitHub (mermaid fenced code blocks in markdown)
-**Plans**: TBD
+**Plans:** 1 plan
 
 Plans:
-- [ ] 02-01: TBD
+- [ ] 02-01-PLAN.md — Create mermaid context diagram (system components) and sequence diagram (pool listening flow), export PNGs for Beamer
 
 ### Phase 3: Repository Artifacts
 **Goal**: Two READMEs serve distinct audiences (root = strategic overview, research = detailed findings) and the demo is documented so anyone can run it

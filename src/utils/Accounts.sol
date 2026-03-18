@@ -12,6 +12,7 @@ struct Accounts {
     Vm.Wallet lpPassive;
     Vm.Wallet lpSophisticated;
     Vm.Wallet swapper;
+    Vm.Wallet reactiveDeployer;  // HD index 4 — dedicated EOA for Lasna reactive deploys (clean ReactVM)
 }
 
 struct ApprovalTarget {
@@ -29,7 +30,8 @@ function makeTestAccounts(Vm vm) returns (Accounts memory) {
         deployer: vm.createWallet("deployer"),
         lpPassive: vm.createWallet("lpPassive"),
         lpSophisticated: vm.createWallet("lpSophisticated"),
-        swapper: vm.createWallet("swapper")
+        swapper: vm.createWallet("swapper"),
+        reactiveDeployer: vm.createWallet("reactiveDeployer")
     });
 }
 
@@ -40,7 +42,8 @@ function initAccounts(Vm vm) returns (Accounts memory) {
         deployer: vm.createWallet(vm.deriveKey(mnemonic, DEFAULT_DERIVATION_PATH, 0), "deployer"),
         lpPassive: vm.createWallet(vm.deriveKey(mnemonic, DEFAULT_DERIVATION_PATH, 1), "lpPassive"),
         lpSophisticated: vm.createWallet(vm.deriveKey(mnemonic, DEFAULT_DERIVATION_PATH, 2), "lpSophisticated"),
-        swapper: vm.createWallet(vm.deriveKey(mnemonic, DEFAULT_DERIVATION_PATH, 3), "swapper")
+        swapper: vm.createWallet(vm.deriveKey(mnemonic, DEFAULT_DERIVATION_PATH, 3), "swapper"),
+        reactiveDeployer: vm.createWallet(vm.deriveKey(mnemonic, DEFAULT_DERIVATION_PATH, 4), "reactiveDeployer")
     });
 }
 

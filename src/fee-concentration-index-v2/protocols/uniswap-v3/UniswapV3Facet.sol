@@ -77,6 +77,10 @@ contract UniswapV3Facet {
         poolKey = fromUniswapV3PoolToPoolKey(v3Pool, fciHook);
         PoolId poolId = PoolIdLibrary.toId(poolKey);
         addPool(UNISWAP_V3_REACTIVE, poolId);
+
+        // NOTE: Epoch init must be called on FCI V2 (not facet) via
+        // fci.initializeEpochPool(key, UNISWAP_V3_REACTIVE, 86400)
+
         emit PoolAdded(
             address(this),
             address(fciFacetAdminStorage(UNISWAP_V3_REACTIVE).protocolCallback),

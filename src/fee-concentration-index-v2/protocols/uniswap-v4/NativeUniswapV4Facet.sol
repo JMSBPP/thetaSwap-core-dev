@@ -85,6 +85,11 @@ contract NativeUniswapV4Facet {
 
         // 4. Register
         addPool(NATIVE_V4, poolId);
+
+        // NOTE: Epoch init must be called on FCI V2 (not facet) via
+        // fci.initializeEpochPool(key, NATIVE_V4, 86400) so storage
+        // lives in the same context as addEpochTerm (delegatecall).
+
         emit PoolAdded(address(this), address(fciFacetAdminStorage(NATIVE_V4).protocolStateView), poolId, NATIVE_V4, "");
     }
 

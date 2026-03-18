@@ -331,6 +331,17 @@ contract FeeConcentrationIndexV2 {
         initOwner(_owner);
     }
 
+    /// @notice Initialize epoch metric for a pool on FCI V2's storage.
+    /// @dev Must be called on FCI V2 (not the facet) so epoch storage
+    ///      lives in the same context as addEpochTerm (delegatecall).
+    function initializeEpochPool(PoolKey calldata key, bytes2 flags, uint256 epochLengthSeconds) external {
+        requireOwner();
+        PoolId poolId = PoolIdLibrary.toId(key);
+        FeeConcentrationEpochStorage storage $ = protocolEpochFciStorage(flags);
+        $.epochLength[poolId] = epochLengthSeconds;
+        $.currentEpochId[poolId] = block.timestamp;
+    }
+
     // ── Facet admin storage (writes to V2's storage context for delegatecall reads) ──
 
     function setFacetFci(bytes2 flags, IFeeConcentrationIndex fci) external {

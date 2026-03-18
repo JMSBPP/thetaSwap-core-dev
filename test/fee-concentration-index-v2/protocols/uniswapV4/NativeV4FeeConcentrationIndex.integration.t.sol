@@ -82,13 +82,21 @@ contract NativeV4FeeConcentrationIndex_IntegrationTest is PosmTestSetup {
         );
         vm.stopPrank();
 
-        // 5. Initialize pool with FCI V2 as hooks
-        (key, poolId) = initPool(
-            currency0, currency1,
-            IHooks(address(fci)),
-            3000,           // fee
-            SQRT_PRICE_1_1  // sqrtPriceX96 = 1:1
-        );
+        // 5. Initialize pool via facet.listen() — production path
+        //    This registers the pool, initializes epoch (1 day), and calls PoolManager.initialize()
+        PoolKey memory rawKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: 3000,
+            tickSpacing: 60,
+            hooks: IHooks(address(fci))
+        });
+        key = facet.listen(abi.encode(rawKey, SQRT_PRICE_1_1));
+        poolId = key.toId();
+
+        // 6. Initialize epoch (1 day) on FCI V2's storage
+        vm.prank(accts.deployer.addr);
+        fci.initializeEpochPool(key, NATIVE_V4, 86400);
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -236,8 +244,10 @@ contract NativeV4FeeConcentrationIndex_IntegrationTest is PosmTestSetup {
         assertApproxEqAbs(uint256(actualAtNull), expectedAtNull, 1, "getAtNull() mismatch");
         assertApproxEqAbs(uint256(actualDeltaPlus), expectedDeltaPlus, 2, "getDeltaPlus() mismatch");
 
-        // Epoch: 0 when not initialized
-        assertEq(uint256(actualDeltaPlusEpoch), 0, "getDeltaPlusEpoch() must be 0 (no epoch)");
+        // Epoch: within 1 day, epoch deltaPlus == cumulative deltaPlus
+        // (epoch is initialized in listen() with 86400s)
+        assertApproxEqAbs(uint256(actualDeltaPlusEpoch), uint256(actualDeltaPlus), 2,
+            "getDeltaPlusEpoch() must equal getDeltaPlus() within same epoch");
 
         // Facet registration
         assertEq(actualFacet, address(facet), "getRegisteredProtocolFacet() mismatch");

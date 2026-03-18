@@ -203,12 +203,14 @@ contract NativeV4FeeConcentrationIndex_IntegrationTest is PosmTestSetup {
         uint128 actualDeltaPlus = fci.getDeltaPlus(key, NATIVE_V4);
         uint128 actualAtNull = fci.getAtNull(key, NATIVE_V4);
 
-        // ── Assert exact match against Python fixture ──
-        assertEq(uint256(actualDeltaPlus), expectedDeltaPlus, "deltaPlus mismatch");
-        assertEq(uint256(actualIndexA), expectedIndexA, "indexA mismatch");
+        // ── Assert against Python fixture ──
+        // Exact for additive quantities (no sqrt rounding)
         assertEq(actualThetaSum, expectedThetaSum, "thetaSum mismatch");
         assertEq(actualRemovedPosCount, expectedRemovedPosCount, "removedPosCount mismatch");
-        assertEq(uint256(actualAtNull), expectedAtNull, "atNull mismatch");
+        // 1-wei tolerance for sqrt-derived quantities (Python isqrt vs Solidity FixedPointMathLib.sqrt)
+        assertApproxEqAbs(uint256(actualIndexA), expectedIndexA, 1, "indexA mismatch");
+        assertApproxEqAbs(uint256(actualAtNull), expectedAtNull, 1, "atNull mismatch");
+        assertApproxEqAbs(uint256(actualDeltaPlus), expectedDeltaPlus, 2, "deltaPlus mismatch");
     }
 
     // ══════════════════════════════════════════════════════════════

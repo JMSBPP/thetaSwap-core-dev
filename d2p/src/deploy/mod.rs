@@ -1,4 +1,5 @@
 pub mod primary;
+pub mod fallback;
 
 use std::path::PathBuf;
 

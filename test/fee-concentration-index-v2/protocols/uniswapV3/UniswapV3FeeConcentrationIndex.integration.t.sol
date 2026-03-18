@@ -107,7 +107,8 @@ contract UniswapV3FCI_IntegrationScript is Script, Test {
         vm.startBroadcast(accts.deployer.privateKey);
         router.mint(pool, accts.deployer.addr, -60, 60, 1e18);
         router.mint(pool, accts.lpPassive.addr, -60, 60, 2e18);
-        router.swap(pool, accts.deployer.addr, true, -1e16, 4295128740);
+        // Swap oneForZero (push price up) — avoids SPL if pool is at MIN_TICK
+        router.swap(pool, accts.deployer.addr, false, -1e16, 1461446703485210103287273052203988822378723970341);
         vm.stopBroadcast();
 
         console2.log("Mints (1e18 + 2e18) + swap done");

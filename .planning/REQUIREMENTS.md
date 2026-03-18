@@ -7,9 +7,9 @@
 
 ### Problem Synthesis
 
-- [ ] **PROB-01**: Presentation opens with the adverse competition problem — fee concentration is orthogonal to LVR, passive LPs face a risk no existing product hedges
-- [ ] **PROB-02**: Research summary covers the quadratic deviation hazard model, inverted-U finding, turning point delta* ~ 0.09
-- [ ] **PROB-03**: Key statistics presented accessibly (41 days, 600 positions, 2.65x real vs null A_T, 63% of days with positive deviation)
+- [x] **PROB-01**: Presentation opens with the adverse competition problem — fee concentration is orthogonal to LVR, passive LPs face a risk no existing product hedges
+- [x] **PROB-02**: Research summary covers the quadratic deviation hazard model, inverted-U finding, turning point delta* ~ 0.09
+- [x] **PROB-03**: Key statistics presented accessibly (41 days, 600 positions, 2.65x real vs null A_T, 63% of days with positive deviation)
 
 ### Architecture Diagrams
 
@@ -63,9 +63,9 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| PROB-01 | Phase 1 | Pending |
-| PROB-02 | Phase 1 | Pending |
-| PROB-03 | Phase 1 | Pending |
+| PROB-01 | Phase 1 | Complete |
+| PROB-02 | Phase 1 | Complete |
+| PROB-03 | Phase 1 | Complete |
 | ARCH-01 | Phase 2 | Pending |
 | ARCH-02 | Phase 2 | Pending |
 | ARCH-03 | Phase 2 | Pending |

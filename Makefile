@@ -11,7 +11,13 @@ build: install verify-data test notebooks
 
 # ── Setup ────────────────────────────────────────────────────────────
 install:
-	git submodule update --init --recursive
+	git submodule update --init
+	git -C lib/uniswap-hooks submodule update --init lib/v4-core lib/openzeppelin-contracts lib/v4-periphery
+	git -C lib/uniswap-hooks/lib/v4-core submodule update --init lib/solmate
+	git -C lib/uniswap-hooks/lib/v4-periphery submodule update --init lib/permit2
+	git -C lib/v4-periphery submodule update --init lib/permit2
+	git -C lib/2025-12-panoptic submodule update --init lib/v4-core
+	git -C lib/typed-uniswap-v4 submodule update --init
 	uv venv $(VENV) --python 3.13
 	uv pip install --python $(PYTHON) -e ".[dev]"
 	$(MAKE) setup-kernel

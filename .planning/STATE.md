@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-01-PLAN.md
-last_updated: "2026-03-18T21:55:14.495Z"
+stopped_at: Completed 01-02-PLAN.md
+last_updated: "2026-03-18T22:02:25.361Z"
 last_activity: 2026-03-18 -- Completed 01-01-PLAN.md (Problem & Research Narrative)
 progress:
   total_phases: 4
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
   percent: 50
 ---
 
@@ -51,6 +51,7 @@ Progress: [█████░░░░░] 50%
 
 *Updated after each plan completion*
 | Phase 01 P01 | 4min | 2 tasks | 2 files |
+| Phase 01 P02 | 5min | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -63,6 +64,8 @@ Recent decisions affecting current work:
 - [Revision]: SLID-* replaced with BEAM-* (LaTeX Beamer, not markdown). READ-* split into ROOT-* (3) + RREAD-* (3). Phase 1 now pure narrative (PROB only); all slide content moved to Phase 4.
 - [Phase 01]: Used actual lag 2-3 coefficient values from econometrics.tex rather than RESEARCH.md placeholders
 - [Phase 01]: Narrative files use machine-readable HTML comment headers for downstream extraction
+- [Phase 01]: usetex disabled: system lacks type1ec.sty; serif font fallback for publication plots
+- [Phase 01]: Created backtest/sweep.py to restore missing trigger-based insurance API for notebook execution
 
 ### Pending Todos
 
@@ -74,6 +77,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T21:55:14.493Z
-Stopped at: Completed 01-01-PLAN.md
+Last session: 2026-03-18T22:02:25.359Z
+Stopped at: Completed 01-02-PLAN.md
 Resume file: None

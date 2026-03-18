@@ -51,7 +51,10 @@ Plans:
   3. `d2p --version` prints the version from Cargo.toml
   4. Missing required flag `--callback` with no env fallback causes exit code 1 with an error on stderr, nothing on stdout
   5. `ETH_RPC_URL` and `ETH_PRIVATE_KEY` env vars are accepted as fallbacks when flags are omitted
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 03-01-PLAN.md — clap env feature + cli.rs (all structs + parse_value + tests) + main.rs rewrite
 
 ## Progress
 
@@ -62,4 +65,4 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Crate Foundation | 1/1 | Complete    | 2026-03-18 |
 | 2. Deploy Logic | 2/2 | Complete    | 2026-03-18 |
-| 3. CLI Wiring | 0/? | Not started | - |
+| 3. CLI Wiring | 0/1 | Not started | - |

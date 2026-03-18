@@ -120,27 +120,41 @@ contract FeeConcentrationIndexV2FullIntegrationTest is Test {
         setUp();
     }
 
-    /// @notice Call after UniswapV3Reactive is deployed on Lasna.
+
+
+    /* modifier fetchOrDeployReactive(bool newDeployement){ */
+    /* 	if (newDeployment){ vm.ffi(make deploy-reactive  --uni-v3);} */
+    /* 	_; */
+    /* } */
+    /* /// @notice Call after UniswapV3Reactive is deployed on Lasna. */
     /// PRE-CONDITIONS:
     /// - UniswapV3Reactive deployed on Lasna
     /// - Set env: LASNA_REACTIVE_ADDRESS=0x...
-    function test_listen() public {
-        // ── PRE-CONDITIONS ──
-        address reactiveAddr = vm.envAddress("LASNA_REACTIVE_ADDRESS");
-        require(reactiveAddr != address(0), "LASNA_REACTIVE_ADDRESS not set");
-        console2.log("UniswapV3Reactive on Lasna: %s", reactiveAddr);
 
-        // ── LISTEN ──
-        vm.startBroadcast(accounts.deployer.privateKey);
-        poolKey = facet.listen(abi.encode(v3Pool));
-        poolId = poolKey.toId();
-        vm.stopBroadcast();
+    
+    /* function test_integration_listenMustTriggerReactiveSubscriptionsAndFunding  (bool newDeployement) public fetchOrDeployReactive(newDeployment){ */
+    /*     // ── PRE-CONDITIONS ── */
+    /*     address reactiveAddr = vm.envAddress("LASNA_REACTIVE_ADDRESS"); */
+    /*     require(reactiveAddr != address(0), "LASNA_REACTIVE_ADDRESS not set"); */
+    /*     console2.log("UniswapV3Reactive on Lasna: %s", reactiveAddr); */
 
-        console2.log("PoolAdded emitted on Sepolia.");
-        console2.log("POOL_ID=%s", vm.toString(PoolId.unwrap(poolId)));
-        console2.log("ReactVM should auto-subscribe to V3 pool events.");
-    }
+    /*     // ── LISTEN ── */
+    /*     vm.startBroadcast(accounts.deployer.privateKey); */
+    /*     poolKey = facet.listen(abi.encode(v3Pool)); */
+    /*     poolId = poolKey.toId(); */
+    /*     vm.stopBroadcast(); */
+
+    /* 	bool res =  vm.ffi(make verify --listen --reactive) */
+    /* 	    if (res) {emit log_ ... ("Reactive subscribed correctly")}; */
+
+    /* } */
 
     // TODO: test_addLiquidity — LP mints position on V3 pool
     // TODO: test_queryIndex — query fci.getIndex(poolKey, UNISWAP_V3_REACTIVE) after callback processes
+
+    /// standard tests
+
+
 }
+
+

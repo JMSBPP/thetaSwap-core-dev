@@ -1,0 +1,108 @@
+<h2>Design Section 2: Size Variants</h2>
+<p class="subtitle">How the logomark simplifies at each breakpoint</p>
+
+<div class="section">
+  <p class="label">Simplification Strategy</p>
+  <p>As size decreases, detail is progressively removed to maintain clarity. Three tiers:</p>
+</div>
+
+<div style="display:flex;gap:3rem;align-items:flex-end;justify-content:center;padding:2rem;background:#1C1917;border-radius:0.75rem;margin-bottom:2rem;">
+
+  <!-- Hero: full detail -->
+  <div style="text-align:center;">
+    <svg viewBox="0 0 120 120" width="128" height="128" xmlns="http://www.w3.org/2000/svg">
+      <path d="M60,27 A33,33 0 0,0 60,93" fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+      <path d="M60,27 A33,33 0 0,1 60,93" fill="none" stroke="#a8a29e" stroke-width="2.5" opacity="0.5"/>
+      <line x1="60" y1="24" x2="60" y2="96" stroke="#84cc16" stroke-width="2.5"/>
+      <line x1="32" y1="60" x2="88" y2="60" stroke="#FAFAF9" stroke-width="1.5" opacity="0.3"/>
+    </svg>
+    <p style="color:#FAFAF9;font-size:0.75rem;margin-top:0.5rem;opacity:0.7;">Hero / Large<br/>64px+</p>
+  </div>
+
+  <!-- Medium: drop crossbar opacity boost -->
+  <div style="text-align:center;">
+    <svg viewBox="0 0 120 120" width="48" height="48" xmlns="http://www.w3.org/2000/svg">
+      <path d="M60,27 A33,33 0 0,0 60,93" fill="none" stroke="#FAFAF9" stroke-width="3.5"/>
+      <path d="M60,27 A33,33 0 0,1 60,93" fill="none" stroke="#a8a29e" stroke-width="3.5" opacity="0.5"/>
+      <line x1="60" y1="24" x2="60" y2="96" stroke="#84cc16" stroke-width="3.5"/>
+      <line x1="32" y1="60" x2="88" y2="60" stroke="#FAFAF9" stroke-width="2" opacity="0.35"/>
+    </svg>
+    <p style="color:#FAFAF9;font-size:0.75rem;margin-top:0.5rem;opacity:0.7;">Nav / Header<br/>24–48px</p>
+  </div>
+
+  <!-- Favicon: maximum simplification -->
+  <div style="text-align:center;">
+    <svg viewBox="0 0 120 120" width="20" height="20" xmlns="http://www.w3.org/2000/svg">
+      <path d="M60,27 A33,33 0 0,0 60,93" fill="none" stroke="#FAFAF9" stroke-width="6"/>
+      <path d="M60,27 A33,33 0 0,1 60,93" fill="none" stroke="#a8a29e" stroke-width="6" opacity="0.45"/>
+      <line x1="60" y1="20" x2="60" y2="100" stroke="#84cc16" stroke-width="6"/>
+    </svg>
+    <p style="color:#FAFAF9;font-size:0.75rem;margin-top:0.5rem;opacity:0.7;">Favicon<br/>16px</p>
+  </div>
+
+  <!-- Token icon in circle -->
+  <div style="text-align:center;">
+    <svg viewBox="0 0 120 120" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="60" cy="60" r="58" fill="#292524" stroke="#44403c" stroke-width="2"/>
+      <path d="M60,32 A28,28 0 0,0 60,88" fill="none" stroke="#FAFAF9" stroke-width="4"/>
+      <path d="M60,32 A28,28 0 0,1 60,88" fill="none" stroke="#a8a29e" stroke-width="4" opacity="0.5"/>
+      <line x1="60" y1="29" x2="60" y2="91" stroke="#84cc16" stroke-width="4"/>
+    </svg>
+    <p style="color:#FAFAF9;font-size:0.75rem;margin-top:0.5rem;opacity:0.7;">Token Icon<br/>32–48px circle</p>
+  </div>
+</div>
+
+<div class="section">
+  <p class="label">Tier Rules</p>
+  <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+    <thead>
+      <tr style="border-bottom:1px solid #44403c;">
+        <th style="text-align:left;padding:0.5rem;">Tier</th>
+        <th style="text-align:left;padding:0.5rem;">Size</th>
+        <th style="text-align:left;padding:0.5rem;">Elements</th>
+        <th style="text-align:left;padding:0.5rem;">Stroke Weight</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #292524;">
+        <td style="padding:0.5rem;">Hero</td>
+        <td style="padding:0.5rem;">64px+</td>
+        <td style="padding:0.5rem;">All 4 elements (both arcs, lime bisector, ghost crossbar)</td>
+        <td style="padding:0.5rem;">2.5 / 1.5 units</td>
+      </tr>
+      <tr style="border-bottom:1px solid #292524;">
+        <td style="padding:0.5rem;">Nav</td>
+        <td style="padding:0.5rem;">24–48px</td>
+        <td style="padding:0.5rem;">All 4 elements, thicker strokes for legibility</td>
+        <td style="padding:0.5rem;">3.5 / 2 units</td>
+      </tr>
+      <tr style="border-bottom:1px solid #292524;">
+        <td style="padding:0.5rem;">Favicon</td>
+        <td style="padding:0.5rem;">16px</td>
+        <td style="padding:0.5rem;">3 elements only — drop ghost crossbar</td>
+        <td style="padding:0.5rem;">6 units</td>
+      </tr>
+      <tr>
+        <td style="padding:0.5rem;">Token</td>
+        <td style="padding:0.5rem;">32–48px</td>
+        <td style="padding:0.5rem;">3 elements in circular container (stone-800 fill, stone-700 border)</td>
+        <td style="padding:0.5rem;">4 units</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="options" style="margin-top:1.5rem;">
+  <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Looks right — continue to next section</h3>
+    </div>
+  </div>
+  <div class="option" data-choice="revise" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content">
+      <h3>Needs changes — I'll explain in terminal</h3>
+    </div>
+  </div>
+</div>

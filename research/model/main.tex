@@ -25,25 +25,26 @@ captures excess concentration above the competitive equilibrium and maps to
 price space via the odds ratio $p = \DeltaPlus/(1-\DeltaPlus)$.
 
 Econometric identification (quadratic deviation exit hazard model) establishes
-an inverted-U relationship: below the turning point $\DeltaStar \approx 0.09$,
-concentration is protective (shelter effect); above it, concentration drives
-LP exits (Capponi regime). This turning point calibrates insurance demand.
+an inverted-U relationship: for the pool we analyzed (ETH/USDC 30bps),
+below the turning point $\DeltaStar \approx 0.09$, concentration is protective
+(shelter effect); above it, concentration drives LP
+exits\footnote{Capponi, Jia \& Zhu (2024) show that JIT liquidity
+mechanically concentrates fees in short-lived positions, diluting passive LPs'
+effective fee rate and pushing them toward their optimal exit threshold.}.
+We find contingent empirical demand from passive liquidity providers for
+insurance against adverse competition, and that the optimal payoff function
+is quadratic. The turning point $\DeltaStar$ calibrates insurance demand.
 
-The hook tracks three co-primary state variables---$\AT$, $\ThetaSum$, $\PosCount$---with
-$\DeltaPlus$ derived on the fly. The mechanism is perpetual with jump-adjusted
-funding and USDC numeraire.
-
-Cross-pool empirical analysis (Spearman $\rho(A_T, \log\text{TVL}) = +0.19$,
-weak) confirms no TVL--concentration correlation, selecting the \textbf{hybrid}
-architecture: hook-based mutual insurance with per-pool reserves funded by
-$\premfactor$\% fee redirect, payouts via \texttt{donate()} when
-$\DeltaPlus > \DeltaStar$, and ERC-6909 transferable claims bridging to an
-optional CFMM market layer.
+The hook tracks three co-primary state variables---$\AT$ (fee concentration
+index), $\ThetaSum$ (aggregate turnover rate $\sum_k \thetapos_k$), and
+$\PosCount$ (active position count)---with $\DeltaPlus$ derived on the fly.
+The mechanism is perpetual with jump-adjusted funding and USDC numeraire.
 \end{abstract}
 
 \tableofcontents
 
 \input{payoff}
+\input{econometrics}
 \input{trading-function}
 \input{reserves}
 \input{borrow-rate}

@@ -1,0 +1,360 @@
+
+3. We are now covering uniswapV3 reacrive integration. 
+
+> We are covering flows, this is we do not implenent entire components but components pieces that completne a testable flow
+
+
+        -------------
+        |     Facet   | 
+        |             |                     Reactive
+    ----- listen(Pool)|	
+	|	|             | 
+	-->	|   PoolAdded |  ----- >           
+		---------------                         
+	-------------
+   | Pool       |                
+   |   Swap     | ------ >                       
+   |   Liquidity|
+   |   Collect  |
+    ------------
+
+     
+------
+
+3.1 
+
+ -------fciProtocolFacet-------            ----------------reactive---------------
+ listen(PoolRpt, uint256 funding) -> react(event PoolAdded(flag included))
+
+--> PoolAdded has the callback 
+--> PoolAdded has the protocolStateView (Origin)
+
+
+--> This does selfSync on POolRegistered  (from EventSignatures) on RN
+--> This subscribes to the pool events (from EventSignatures) on RVM
+
+--> ALL WITH THE UPADTED FLOW OF THE EDT
+
+--------------fciProtocolCallback------------
+ -> callback upadtes fci (flag -> poolId -> facet)
+
+
+
+3.2 refactor -> reactive tests
+
+
+
+- Now protocol can call getDeltaPlus, get everything ...
+
+
+5. Update integration with vaults
+6. Clean dead code
+
+---------
+
+7. dune queries inlined rather than hardcoded data, verify they yield the same results
+8. Same for graph ql
+
+```
+     ACTION INTENT : protocol A wants a feeConcentration oracle on its live pool A_i:
+
+      PRE-CONDITIONS
+      - protocol A DEPLOYS IProtocolFacet
+      - protocol A DEPLOYS IUnlockCallback
+      - protocol A DEPLOYS IProtocolSocket
+
+      ACTIONS:
+      1. protocol A REGISTERS IProtocolFacet onn IFeeConcentrationIndex
+      2. protocol A REGISTERS IUnlockCallback on IFeeConcentrationIndex
+
+      POST-CONDITIONS
+      - protocol A  CAN CALL IProtocolFacet.listen(A_i, flags(A_I), funding(A_i))
+      - protocol A CAN CALL IFeeConcentrationIndex.getDeltaPlus(poolKey(A_i))
+      - protocol A LP's CAN ACCESS VAULTS SERVICES
+
+          ACTION_INTENT : protocol A wants to deploy a  IFCIProtocolFacet:
+
+	  ACTION_SEQUENCE:
+
+		  ACTION_INTENT: protocol A wants to deploy a IFCIUnlockCallback:
+		  struct ProtocolFacetStorage{
+                      IProtocolStateView protocolStateView;
+		      IFCIUnlockCallback protocolCallback;
+		  }
+                  // Facet can be the callback
+		  interface IFCIUnlockCallback is IUnlockCallback{
+                      function unlockReactiveCallback(address rvmId, bytes calldata data);
+		  }
+		  
+                  ACTION_INTENT: protocol A wants to deploy IFCISocket
+		  
+
+    ACTION_INTENT: protocol A wants to deploy a IFCIProtocolSocket ON REACTIVE_NETWORK:
+
+    interface IFCIProtocolSocket is IReactive{
+         function listenPool(uitn256 chainId, PoolKey)
+         function unListenPool(uint256 chainId, PoolKey)
+    }
+
+```
+ 
+ UNISWAP_V3_CALLBACK
+ ------------
+
+
+
+--> UniswapV3Callback
+
+
+Assuming:
+
+- payment is cleared:
+- rvmId is handled on unlockCallback(addresss rvmId, bytes memory data)
+
+
+--> We only concern with the 'data'
+
+- receives the raw event data from the Callback event
+
+- Then it dispatches to the right fci Hook Callback
+  - What does it need to dispatch to the right fci hook callback ?
+
+
+callbackProxy ------------------------> UniswapV3Callback 
+                 Callback(payload)
+
+
+    (payload) --> (FCIHookFunctionCalldata)
+
+
+                   --> beforeSwap
+                 /
+                /  ----> afterSwap
+    (payload) -    ...
+
+                \
+                  --> afterRemoveLiquidity
+   
+
+1. payload -> afterAddLiquidityCalldata
+
+
+-> How does the current reactive-integration uniswao V3 floew handles the  payload -> afterAddLiquidityCalldata ?
+
+v3Pool --> `Mint(sender, owner, tickLower, tickUpper, amount, amount0, amount1)` .
+
+                                          |
+                                          v
+
+(1) IFCIProtocolFacet.positionKey(hookData, sender, params)
+  -> sender(Mint) == sender(afterAddLiquidityCalldata)
+  ->
+   struct ModifyLiquidityParams {
+      int24 tickLower ------------> tickLower(Mint)
+      int24 tickUpper ------------> tickUpper(Mint)
+      int256 liquidityDelta  ------> int256(Mint.amount)
+      bytes32 salt  --------------> bytes32(0x00)
+  }
+
+> On afterAddLiquidity hookData MUST carry
+ -> flag of the protocol -> PROTOCOL_FLAG a constant know by the callback
+ -> address of the pool -> V3_POOL_ADDR
+ -> signal of the transactio type -> ADD_LIQUDITY (re-use Actions.sol of V4)
+
+hookData = PROTOCOL_FLAG | V3_POOL_ADDR | AFTER_ADD_LIQUIDITY 
+
+(2) IFCIProtocolFacet.latestPositionFeeGrowth(hookData, poolId, posKey)
+
+-> posKey -> (1)
+
+--> (posLiquidity,feeGrowthInsideLast0,feeGrowthInsideLast1,,,) =
+    IUniswapV3PoolState(poolAddress(hookData)).positions(posKey)
+
+(3) IFCIProtocolFacet.addPositionInRange(hookData, posKey, snapshot)
+
+-> params -> (1)
+   ->   TickRange rk = fromTicksPacked(params.tickLower, params.tickUpper);
+-> snapshot -> (2)
+
+LiquidityPositionSnapshot memory snapshot = LiquidityPositionSnapshot({
+    config: PositionConfig({poolKey: key, tickLower: params.tickLower, tickUpper: params.tickUpper}),
+    liquidity: posLiquidity,
+    feeGrowthInside0LastX128: feeGrowthInsideLast0,
+    feeGrowthInside1LastX128: 0feeGrowthInsideLast1
+});
+
+function addPositionInRange(bytes calldata, bytes32 posKey, LiquidityPositionSnapshot calldata snapshot) external onlyDelegateCall {
+    FeeConcentrationIndexV2Storage storage $ = protocolFciStorage(NATIVE_V4);
+    PoolId poolId = PoolIdLibrary.toId(snapshot.config.poolKey);
+    TickRange rk = fromTicksPacked(snapshot.config.tickLower, snapshot.config.tickUpper);
+    $.registries[poolId].register(rk, posKey, snapshot.liquidity);
+}
+
+...
+
+
+1. payload -> beforeSwap
+
+hookData = PROTOCOL_FLAG | V3_POOL_ADDR | BEFORE_SWAP | LATEST_TICK |
+
+function beforeSwap(
+    address sender,
+    PoolKey calldata key,
+    SwapParams calldata,
+    bytes calldata hookData
+)
+
+
+event Swap( address indexed sender,address indexed recipient, int256 amount0, int256 amount1,
+    uint160 sqrtPriceX96,
+    uint128 liquidity,
+    int24 tick
+    )
+
+/// @notice Parameter struct for `Swap` pool operations
+struct SwapParams {
+    /// Whether to swap token0 for token1 or vice versa
+    bool zeroForOne;
+    /// The desired input amount if negative (exactIn), or the desired output amount if positive (exactOut)
+    int256 amountSpecified;
+    /// The sqrt price at which, if reached, the swap will stop executing
+    uint160 sqrtPriceLimitX96;
+}
+
+(1). IFCIProtocolFacet.currentTick(poolAddress(hookData), poolId))
+
+> The facet resolves on currentTick to give the beforeSwapTick = latestTick(hookData)
+subject to the BEFORE_SWAP flag
+
+
+(2). IFCIProtocolFacet.tstoreTick(hookData, tick)
+> changes the BEFORE_SWAP -> AFTER_SWAP
+
+
+- payload -> afterSwap
+
+hookData = PROTOCOL_FLAG | V3_POOL_ADDR | AFTER_SWAP | LATEST_TICK |
+
+
+(1) IFCIProtocolFacet.tloadTick(hookData)
+ -> latestTick(hookData)
+
+(2) IFCIProtocolFacet.currentTick(hookData, poolId),
+-> afterSwap(hookData) -> IUniswapV3PoolState(...).tick()
+
+(3) sortTicks(tickBefore, tickAfter);
+
+(4) IFCIProtocolFacet.incrementOverlappingRanges(hookData, poolId, tickMin, tickMax)
+(Already has the data the implementation is a facet problem)
+
+
+- payload  -> beforeRemoveLiquidity
+
+hookData = PROTOCOL_FLAG | V3_POOL_ADDR | BEFORE_REMOVE_LIQUIDITY | LATEST_TICK |
+|POSITION_FEE_LAST | POS_LIQUIDITY | RANGE_FEE_GROWTH 
+
+event Burn(
+    address indexed owner,
+    int24 indexed tickLower,
+    int24 indexed tickUpper,
+    uint128 amount,
+    uint256 amount0,
+    uint256 amount1
+);
+
+event Collect(
+    address indexed owner,
+    address recipient,
+    int24 indexed tickLower,
+    int24 indexed tickUpper,
+    uint128 amount0,
+    uint128 amount1
+);
+
+function beforeRemoveLiquidity(
+        address sender,
+        PoolKey calldata key,
+        ModifyLiquidityParams calldata params,
+        bytes calldata hookData
+    ) external returns (bytes4)
+
+
+(1). IFCIProtocolFacet.positionKey(hookData, sender, params),
+(2)  IFCIProtocolFacet.latestPositionFeeGrowthInside(hookData, poolId, posKey),
+(same pattern as (payload -> afterAddLiquidity))
+
+(3) IFCIProtocolFacet.currentTick(hookData, poolId)
+(same pattern as (payload -> beforeSwap))
+
+(4) IFCIProtocolFacet.poolRangeFeeGrowthInside(hookData, poolId, tick, rk)
+(same pattern as (payload -> afterAddLiquidity), but instead of position query pool)
+
+
+(5) IFCIProtocolFacet.tstoreRemovalData(hookData, feeLast0, posLiquidity, rangeFeeGrowth0)
+
+(same pattern used for transition from beforeSwap -> afterSwap)
+
+-> hookData is changed to AFTER_REMOVE_LIQUIDITY
+
+- payload  -> afterRemoveLiquidity
+
+
+    function afterRemoveLiquidity(
+        address sender,
+        PoolKey calldata key,
+        ModifyLiquidityParams calldata params,
+        BalanceDelta,
+        BalanceDelta,
+        bytes calldata hookData
+    ) external virtual returns (bytes4, BalanceDelta)
+
+(1) positionKey
+(same as afterAddLiquidity)
+(2) IFCIProtocolFacet.tloadRemovalData(hookData)
+(reads it from hookData)
+
+(3) IFCIProtocolFacet.getFeeGrowthBaseline(hookData, poolId, posKey)
+(protocolFlag(hookData) -> gets the storage slot from where to read feeGrowthBase)
+
+
+(4) IFCIProtocolFacet.removePositionInRange(hookData, posKey, snapshot)
+            (SwapCount, BlockCount, uint128)
+
+
+            // 6. addStateTerm
+            LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.addStateTerm, (hookData, poolId, blockLifetime, xSquaredQ128)));
+
+            // 7. addEpochTerm
+            LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.addEpochTerm, (hookData, poolId, blockLifetime, xSquaredQ128)));
+        }
+
+        // 8. decrementPosCount
+        LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.decrementPosCount, (hookData, poolId)));
+
+        // 9. deleteFeeGrowthBaseline
+        LibCall.delegateCallContract(facet, abi.encodeCall(IFCIProtocolFacet.deleteFeeGrowthBaseline, (hookData, poolId, posKey)));
+
+        return (IHooks.afterRemoveLiquidity.selector, BalanceDelta.wrap(0));
+
+
+--> From (6) -> (9) it is reading from the right slot given by the protocolFlag which is in hookData and
+in the actual callback
+
+c-------> Testing Strategy
+
+- Start tokens, accounts and fund them
+- Get chain position manager, pool manager, etc
+- Deploy the hook
+- Deploy the facet and callback
+- Register facet and callback
+ Deploy the reactive
+- have an lp account call listen
+- Track events on the RN (expect emit)
+
+- Add a liquidity position query the index (must be non zero)
+
+
+- We need better admin fuctions that do not have us re-deploying contracts if others got upgraded
+In all teh contracts thet need to set others as clients. This incluedes the reactive
+
+- The reactive ocntract stays with the funds if other contract is used, we need to wither make it upgradeable or have it return the funds with a call

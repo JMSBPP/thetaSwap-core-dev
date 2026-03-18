@@ -7,7 +7,9 @@
 
 ## Goal
 
-Implement the first testable reactive flow for Uniswap V3 integration using the new Event Dispatch Table (EDT) from reactive-hooks. The flow starts with `listen(poolRpt)` on the origin chain and ends with `MockCallbackReceiver` confirming data arrival on the destination chain.
+Implement the first testable reactive flow for Uniswap V3 integration using the new Event Dispatch Table (EDT) from reactive-hooks. 
+
+The flow starts with `listen(poolRpt)` on the origin chain and ends with `MockCallbackReceiver` confirming data arrival on the destination chain.
 
 ## Flow Summary
 

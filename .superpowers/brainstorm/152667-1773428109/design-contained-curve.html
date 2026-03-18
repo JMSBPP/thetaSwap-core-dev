@@ -1,0 +1,121 @@
+<h2>Fixed: Curve Contained Within Circle</h2>
+<p class="subtitle">The power-law curve stays inside the circle boundary. Peak height capped well below the top arc.</p>
+
+<div class="section">
+  <p class="label">Constraint</p>
+  <p>Circle radius = 33, center at (60,60). The crossbar sits at y=60. The top of the circle is at y=27. The curve peak must stay above y=60 (the crossbar) but below y=33 (leaving ~6 units of clearance from the arc). This gives the curve room to breathe inside the Θ without breaking the boundary.</p>
+</div>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Dark Mode (Primary)</div>
+    <div class="mockup-body" style="display:flex;align-items:center;justify-content:center;min-height:280px;background:#1C1917;">
+      <svg viewBox="0 0 120 120" width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+        <!-- Left half-circle (passive LPs, bright) -->
+        <path d="M60,27 A33,33 0 0,0 60,93" fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+        <!-- Right half-circle (sophisticated agents, faded) -->
+        <path d="M60,27 A33,33 0 0,1 60,93" fill="none" stroke="#a8a29e" stroke-width="2.5" opacity="0.5"/>
+        <!-- Theta crossbar (straight, x-axis) -->
+        <line x1="27" y1="60" x2="93" y2="60" stroke="#FAFAF9" stroke-width="1.5" opacity="0.4"/>
+        <!-- Power-law curve — contained within circle, peak at y≈38 -->
+        <path d="M27,60 C30,55 33,46 37,40 C40,36 44,35 48,38 C53,43 59,52 66,55 C73,57 82,59 93,60" fill="none" stroke="#84cc16" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">Light Mode</div>
+    <div class="mockup-body" style="display:flex;align-items:center;justify-content:center;min-height:280px;background:#FAFAF9;">
+      <svg viewBox="0 0 120 120" width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+        <path d="M60,27 A33,33 0 0,0 60,93" fill="none" stroke="#1C1917" stroke-width="2.5"/>
+        <path d="M60,27 A33,33 0 0,1 60,93" fill="none" stroke="#a8a29e" stroke-width="2.5" opacity="0.5"/>
+        <line x1="27" y1="60" x2="93" y2="60" stroke="#1C1917" stroke-width="1.5" opacity="0.4"/>
+        <path d="M27,60 C30,55 33,46 37,40 C40,36 44,35 48,38 C53,43 59,52 66,55 C73,57 82,59 93,60" fill="none" stroke="#65a30d" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<div class="split" style="margin-top:1.5rem;">
+  <div class="mockup">
+    <div class="mockup-header">Monochrome Fallback</div>
+    <div class="mockup-body" style="display:flex;align-items:center;justify-content:center;min-height:280px;background:#ffffff;">
+      <svg viewBox="0 0 120 120" width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+        <path d="M60,27 A33,33 0 0,0 60,93" fill="none" stroke="#1C1917" stroke-width="2.5"/>
+        <path d="M60,27 A33,33 0 0,1 60,93" fill="none" stroke="#1C1917" stroke-width="2.5" opacity="0.4"/>
+        <line x1="27" y1="60" x2="93" y2="60" stroke="#1C1917" stroke-width="1.5" opacity="0.35"/>
+        <path d="M27,60 C30,55 33,46 37,40 C40,36 44,35 48,38 C53,43 59,52 66,55 C73,57 82,59 93,60" fill="none" stroke="#1C1917" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">Inverted Monochrome</div>
+    <div class="mockup-body" style="display:flex;align-items:center;justify-content:center;min-height:280px;background:#1C1917;">
+      <svg viewBox="0 0 120 120" width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+        <path d="M60,27 A33,33 0 0,0 60,93" fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+        <path d="M60,27 A33,33 0 0,1 60,93" fill="none" stroke="#FAFAF9" stroke-width="2.5" opacity="0.4"/>
+        <line x1="27" y1="60" x2="93" y2="60" stroke="#FAFAF9" stroke-width="1.5" opacity="0.35"/>
+        <path d="M27,60 C30,55 33,46 37,40 C40,36 44,35 48,38 C53,43 59,52 66,55 C73,57 82,59 93,60" fill="none" stroke="#FAFAF9" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<h2 style="margin-top:2rem;">Size Variants</h2>
+
+<div style="display:flex;gap:3rem;align-items:flex-end;justify-content:center;padding:2rem;background:#1C1917;border-radius:0.75rem;margin-top:1rem;">
+  <!-- Hero -->
+  <div style="text-align:center;">
+    <svg viewBox="0 0 120 120" width="120" height="120" xmlns="http://www.w3.org/2000/svg">
+      <path d="M60,27 A33,33 0 0,0 60,93" fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+      <path d="M60,27 A33,33 0 0,1 60,93" fill="none" stroke="#a8a29e" stroke-width="2.5" opacity="0.5"/>
+      <line x1="27" y1="60" x2="93" y2="60" stroke="#FAFAF9" stroke-width="1.5" opacity="0.4"/>
+      <path d="M27,60 C30,55 33,46 37,40 C40,36 44,35 48,38 C53,43 59,52 66,55 C73,57 82,59 93,60" fill="none" stroke="#84cc16" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>
+    <p style="color:#FAFAF9;font-size:0.7rem;margin-top:0.5rem;opacity:0.6;">Hero 64px+</p>
+  </div>
+  <!-- Nav -->
+  <div style="text-align:center;">
+    <svg viewBox="0 0 120 120" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
+      <path d="M60,27 A33,33 0 0,0 60,93" fill="none" stroke="#FAFAF9" stroke-width="4"/>
+      <path d="M60,27 A33,33 0 0,1 60,93" fill="none" stroke="#a8a29e" stroke-width="4" opacity="0.5"/>
+      <line x1="27" y1="60" x2="93" y2="60" stroke="#FAFAF9" stroke-width="2.5" opacity="0.4"/>
+      <path d="M27,60 C30,55 33,46 37,40 C40,36 44,35 48,38 C53,43 59,52 66,55 C73,57 82,59 93,60" fill="none" stroke="#84cc16" stroke-width="4" stroke-linecap="round"/>
+    </svg>
+    <p style="color:#FAFAF9;font-size:0.7rem;margin-top:0.5rem;opacity:0.6;">Nav 24-48px</p>
+  </div>
+  <!-- Favicon -->
+  <div style="text-align:center;">
+    <svg viewBox="0 0 120 120" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
+      <path d="M60,27 A33,33 0 0,0 60,93" fill="none" stroke="#FAFAF9" stroke-width="7"/>
+      <path d="M60,27 A33,33 0 0,1 60,93" fill="none" stroke="#a8a29e" stroke-width="7" opacity="0.45"/>
+      <path d="M27,60 C34,48 44,38 54,46 C64,52 80,58 93,60" fill="none" stroke="#84cc16" stroke-width="7" stroke-linecap="round"/>
+    </svg>
+    <p style="color:#FAFAF9;font-size:0.7rem;margin-top:0.5rem;opacity:0.6;">Favicon 16px</p>
+  </div>
+  <!-- Token -->
+  <div style="text-align:center;">
+    <svg viewBox="0 0 120 120" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="60" cy="60" r="58" fill="#292524" stroke="#44403c" stroke-width="2"/>
+      <path d="M60,30 A28,28 0 0,0 60,90" fill="none" stroke="#FAFAF9" stroke-width="4.5"/>
+      <path d="M60,30 A28,28 0 0,1 60,90" fill="none" stroke="#a8a29e" stroke-width="4.5" opacity="0.5"/>
+      <line x1="32" y1="60" x2="88" y2="60" stroke="#FAFAF9" stroke-width="2" opacity="0.4"/>
+      <path d="M32,60 C35,55 38,48 42,43 C45,39 49,38 53,41 C58,46 64,53 71,56 C78,58 84,59 88,60" fill="none" stroke="#84cc16" stroke-width="4.5" stroke-linecap="round"/>
+    </svg>
+    <p style="color:#FAFAF9;font-size:0.7rem;margin-top:0.5rem;opacity:0.6;">Token 32-48px</p>
+  </div>
+</div>
+
+<div class="options" style="margin-top:1.5rem;">
+  <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Approve — proceed to write spec document</h3>
+    </div>
+  </div>
+  <div class="option" data-choice="revise" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content">
+      <h3>Needs changes</h3>
+    </div>
+  </div>
+</div>

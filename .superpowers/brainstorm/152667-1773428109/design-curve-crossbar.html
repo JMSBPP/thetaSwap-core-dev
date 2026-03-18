@@ -1,0 +1,62 @@
+<h2>Revised: Crossbar as Statistical Curve</h2>
+<p class="subtitle">The horizontal bar of Θ becomes a distribution curve biased towards fairness (left = passive LPs)</p>
+
+<div class="section">
+  <p class="label">Concept</p>
+  <p>Instead of a straight line, the theta crossbar is a smooth curve that peaks on the left (fairness / passive LP side) and decays exponentially towards the right (concentration / sophisticated agent side). It reads as both a Θ crossbar and a probability distribution — encoding the protocol's purpose in its shape.</p>
+</div>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="display:flex;align-items:center;justify-content:center;min-height:240px;background:#1C1917;padding:1.5rem;">
+      <svg viewBox="0 0 120 140" width="160" height="187" xmlns="http://www.w3.org/2000/svg">
+        <!-- Left half of ellipse (passive LPs, bright) -->
+        <path d="M60,18 A27,42 0 0,0 60,122" fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+        <!-- Right half of ellipse (sophisticated agents, faded) -->
+        <path d="M60,18 A27,42 0 0,1 60,122" fill="none" stroke="#a8a29e" stroke-width="2.5" opacity="0.5"/>
+        <!-- Exponential decay curve (peaks left, decays right) -->
+        <path d="M33,70 C38,48 44,42 50,40 C56,42 62,54 68,62 C74,66 80,68 87,69" fill="none" stroke="#84cc16" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>A — Exponential Decay</h3>
+      <p>Sharp peak on the left at the ellipse edge, smooth exponential tail to the right. Resembles a shifted exponential PDF. Most dramatic asymmetry — clearly "biased."</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="display:flex;align-items:center;justify-content:center;min-height:240px;background:#1C1917;padding:1.5rem;">
+      <svg viewBox="0 0 120 140" width="160" height="187" xmlns="http://www.w3.org/2000/svg">
+        <!-- Left half of ellipse -->
+        <path d="M60,18 A27,42 0 0,0 60,122" fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+        <!-- Right half of ellipse -->
+        <path d="M60,18 A27,42 0 0,1 60,122" fill="none" stroke="#a8a29e" stroke-width="2.5" opacity="0.5"/>
+        <!-- Left-skewed normal (mode shifted left, right tail) -->
+        <path d="M33,70 C37,68 40,58 45,46 C49,40 52,38 55,40 C60,46 65,58 70,64 C76,68 82,69 87,70" fill="none" stroke="#84cc16" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>B — Skewed Normal (Left-Biased)</h3>
+      <p>Bell curve with the peak shifted towards the left (fairness). Gentle rise, sharp peak in the passive LP zone, longer tail into agent territory. Recognizable as a distribution.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="display:flex;align-items:center;justify-content:center;min-height:240px;background:#1C1917;padding:1.5rem;">
+      <svg viewBox="0 0 120 140" width="160" height="187" xmlns="http://www.w3.org/2000/svg">
+        <!-- Left half of ellipse -->
+        <path d="M60,18 A27,42 0 0,0 60,122" fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+        <!-- Right half of ellipse -->
+        <path d="M60,18 A27,42 0 0,1 60,122" fill="none" stroke="#a8a29e" stroke-width="2.5" opacity="0.5"/>
+        <!-- Power-law / Pareto-like: steep left rise, long smooth tail -->
+        <path d="M33,70 C35,62 38,46 42,38 C46,34 50,36 54,42 C60,52 66,62 72,66 C78,68 84,69 87,70" fill="none" stroke="#84cc16" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>C — Power-Law / Pareto</h3>
+      <p>Steep rise near the left edge, sharp peak, then a long smooth power-law tail. Echoes the power-squared payoff function (α=2) in the protocol math. Heavy tail = tail risk that underwriters absorb.</p>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:1.5rem;">All three start and end at the ellipse edges (y≈70), ensuring the curve reads as the Θ crossbar. The peak rises upward (towards lower y) = "fairness is elevated."</p>

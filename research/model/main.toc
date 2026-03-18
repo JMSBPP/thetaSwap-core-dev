@@ -1,0 +1,103 @@
+\contentsline {section}{\numberline {1}Fee Concentration Index}{4}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Primary Index: $A_T$}{4}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Co-Primary State Variables}{5}{subsection.1.2}%
+\contentsline {subsection}{\numberline {1.3}Concentration Deviation: $\Delta ^{+}$}{5}{subsection.1.3}%
+\contentsline {subsection}{\numberline {1.4}Price Mapping}{6}{subsection.1.4}%
+\contentsline {section}{\numberline {2}Econometric Calibration}{6}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Quadratic Deviation Model}{6}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Key Results}{6}{subsection.2.2}%
+\contentsline {subsection}{\numberline {2.3}Inverted-U and the Insurance Trigger}{7}{subsection.2.3}%
+\contentsline {section}{\numberline {3}Settled Design Properties}{7}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Backtest-Confirmed Properties}{7}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Optimal Payoff Formula: Power-Squared Exit Payoff}{8}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Why Power-Squared Dominates}{8}{subsection.3.3}%
+\contentsline {section}{\numberline {4}Architectural Design}{9}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Participants and Token Mapping}{9}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}LP Payoff (Underwriter)}{9}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Borrower Payoff (PLP)}{10}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Market-Implied Strike}{10}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}Connection to PowerMaker}{10}{subsection.4.5}%
+\contentsline {section}{\numberline {5}Methodology and Data}{10}{section.5}%
+\contentsline {subsubsection}{\numberline {5.0.1}Unit of Observation}{11}{subsubsection.5.0.1}%
+\contentsline {subsubsection}{\numberline {5.0.2}Outcome Variable}{11}{subsubsection.5.0.2}%
+\contentsline {subsection}{\numberline {5.1}Fee Concentration Index (Econometric Definition)}{11}{subsection.5.1}%
+\contentsline {subsubsection}{\numberline {5.1.1}The Equal-Share Null}{12}{subsubsection.5.1.1}%
+\contentsline {subsubsection}{\numberline {5.1.2}Concentration Deviation}{12}{subsubsection.5.1.2}%
+\contentsline {subsubsection}{\numberline {5.1.3}Empirical Properties of $\Delta _t$}{12}{subsubsection.5.1.3}%
+\contentsline {subsection}{\numberline {5.2}Theoretical Foundations}{12}{subsection.5.2}%
+\contentsline {subsubsection}{\numberline {5.2.1}Capponi \& Zhu (2024): Optimal Exit Threshold}{13}{subsubsection.5.2.1}%
+\contentsline {subsubsection}{\numberline {5.2.2}Capponi, Jia \& Zhu (2024): JIT Fee Dilution}{13}{subsubsection.5.2.2}%
+\contentsline {subsubsection}{\numberline {5.2.3}Ma \& Crapis (2024): The Competitive Null}{13}{subsubsection.5.2.3}%
+\contentsline {subsubsection}{\numberline {5.2.4}Aquilina, Foley, Gambacorta \& Krekel (2024): Empirical Validation}{13}{subsubsection.5.2.4}%
+\contentsline {subsubsection}{\numberline {5.2.5}Bichuch \& Feinstein (2024): Fee-as-Derivative Pricing}{14}{subsubsection.5.2.5}%
+\contentsline {subsection}{\numberline {5.3}Economic Model}{14}{subsection.5.3}%
+\contentsline {subsubsection}{\numberline {5.3.1}Environment and Actors}{14}{subsubsection.5.3.1}%
+\contentsline {subsubsection}{\numberline {5.3.2}Equilibrium Concept}{14}{subsubsection.5.3.2}%
+\contentsline {subsection}{\numberline {5.4}Stochastic Model}{15}{subsection.5.4}%
+\contentsline {subsubsection}{\numberline {5.4.1}Unobserved Heterogeneity ($\eta $)}{15}{subsubsection.5.4.1}%
+\contentsline {subsubsection}{\numberline {5.4.2}Agent Uncertainty}{15}{subsubsection.5.4.2}%
+\contentsline {subsubsection}{\numberline {5.4.3}Implied Error Structure}{15}{subsubsection.5.4.3}%
+\contentsline {subsection}{\numberline {5.5}Estimation Strategy}{15}{subsection.5.5}%
+\contentsline {subsubsection}{\numberline {5.5.1}Model Progression}{15}{subsubsection.5.5.1}%
+\contentsline {paragraph}{Specification 1: Linear (Point Lag).}{15}{section*.2}%
+\contentsline {paragraph}{Specification 2: Linear Deviation from $1/N$.}{15}{section*.3}%
+\contentsline {paragraph}{Specification 3: Quadratic Deviation (Primary Model).}{16}{section*.4}%
+\contentsline {subsubsection}{\numberline {5.5.2}Estimation Method}{16}{subsubsection.5.5.2}%
+\contentsline {subsection}{\numberline {5.6}Results}{16}{subsection.5.6}%
+\contentsline {subsubsection}{\numberline {5.6.1}Main Result: Quadratic Deviation Model}{16}{subsubsection.5.6.1}%
+\contentsline {subsubsection}{\numberline {5.6.2}Full Lag-1 Coefficients}{17}{subsubsection.5.6.2}%
+\contentsline {subsection}{\numberline {5.7}Economic Interpretation}{17}{subsection.5.7}%
+\contentsline {subsubsection}{\numberline {5.7.1}The Inverted-U: Two Regimes}{17}{subsubsection.5.7.1}%
+\contentsline {subsubsection}{\numberline {5.7.2}Marginal Effect at the Turning Point}{17}{subsubsection.5.7.2}%
+\contentsline {subsubsection}{\numberline {5.7.3}Insurance Pricing Translation}{18}{subsubsection.5.7.3}%
+\contentsline {subsection}{\numberline {5.8}Specification Tests}{18}{subsection.5.8}%
+\contentsline {subsubsection}{\numberline {5.8.1}Test 1: Sign Restriction (Capponi \& Zhu Prediction)}{18}{subsubsection.5.8.1}%
+\contentsline {subsubsection}{\numberline {5.8.2}Test 2: Dose-Response Monotonicity}{18}{subsubsection.5.8.2}%
+\contentsline {subsubsection}{\numberline {5.8.3}Test 3: Lag Robustness}{18}{subsubsection.5.8.3}%
+\contentsline {subsubsection}{\numberline {5.8.4}Test 4: IL Orthogonality}{18}{subsubsection.5.8.4}%
+\contentsline {subsubsection}{\numberline {5.8.5}Test 5: JIT Confounding Control}{19}{subsubsection.5.8.5}%
+\contentsline {subsubsection}{\numberline {5.8.6}Test 6: Alternative Treatment Timing}{19}{subsubsection.5.8.6}%
+\contentsline {subsection}{\numberline {5.9}Robustness: Five Linear Specifications}{19}{subsection.5.9}%
+\contentsline {subsubsection}{\numberline {5.9.1}Specification A: Point Real A\_T}{19}{subsubsection.5.9.1}%
+\contentsline {subsubsection}{\numberline {5.9.2}Specification B: Lifetime Mean A\_T}{20}{subsubsection.5.9.2}%
+\contentsline {subsubsection}{\numberline {5.9.3}Specification C: Deviation from $1/N$ (Wrong Null)}{20}{subsubsection.5.9.3}%
+\contentsline {subsubsection}{\numberline {5.9.4}Specification D: Corrected Deviation (Same Position Set)}{20}{subsubsection.5.9.4}%
+\contentsline {subsubsection}{\numberline {5.9.5}Specification E: JIT-Controlled Linear}{20}{subsubsection.5.9.5}%
+\contentsline {subsection}{\numberline {5.10}Literature Alignment}{20}{subsection.5.10}%
+\contentsline {subsection}{\numberline {5.11}Connection to ThetaSwap}{21}{subsection.5.11}%
+\contentsline {subsection}{\numberline {5.12}Data and Implementation}{22}{subsection.5.12}%
+\contentsline {subsection}{\numberline {5.13}Econometric References}{22}{subsection.5.13}%
+\contentsline {section}{\numberline {6}Trading Function}{23}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Reserve Derivation}{23}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Coordinate Transform: $u = x^2$}{23}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Spot Price}{24}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}Swap Mechanics}{24}{subsection.6.4}%
+\contentsline {subsection}{\numberline {6.5}Liquidity Provisioning}{24}{subsection.6.5}%
+\contentsline {section}{\numberline {7}Reserve Analysis}{25}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Reserve Curves in Price Space}{25}{subsection.7.1}%
+\contentsline {subsection}{\numberline {7.2}Monotonicity}{25}{subsection.7.2}%
+\contentsline {subsection}{\numberline {7.3}Collateral Accounting}{25}{subsection.7.3}%
+\contentsline {subsection}{\numberline {7.4}Numerical Verification}{26}{subsection.7.4}%
+\contentsline {section}{\numberline {8}Borrow Rate}{26}{section.8}%
+\contentsline {subsection}{\numberline {8.1}Borrow Rate: JumpRate Curve}{26}{subsection.8.1}%
+\contentsline {subsection}{\numberline {8.2}Borrow Rate Accrual}{27}{subsection.8.2}%
+\contentsline {subsection}{\numberline {8.3}Separate Accounting Principle}{27}{subsection.8.3}%
+\contentsline {section}{\numberline {9}Funding Rate}{27}{section.9}%
+\contentsline {subsection}{\numberline {9.1}Mark and Index Prices}{27}{subsection.9.1}%
+\contentsline {subsection}{\numberline {9.2}Discrete Funding at Hook Callbacks}{28}{subsection.9.2}%
+\contentsline {subsection}{\numberline {9.3}Jump-Adjusted Replication}{28}{subsection.9.3}%
+\contentsline {subsection}{\numberline {9.4}Funding Accumulator}{29}{subsection.9.4}%
+\contentsline {subsection}{\numberline {9.5}Convergence Property}{29}{subsection.9.5}%
+\contentsline {section}{\numberline {10}Initialization}{29}{section.10}%
+\contentsline {subsection}{\numberline {10.1}Pool Initialization}{29}{subsection.10.1}%
+\contentsline {subsection}{\numberline {10.2}First Underwriter Deposit}{30}{subsection.10.2}%
+\contentsline {subsection}{\numberline {10.3}PLP Registration (Borrowing)}{31}{subsection.10.3}%
+\contentsline {subsection}{\numberline {10.4}PLP Exit (Returning LP Share)}{31}{subsection.10.4}%
+\contentsline {section}{\numberline {11}Invariants}{31}{section.11}%
+\contentsline {subsection}{\numberline {11.1}Base CFMM Invariants (CFMM-01 through CFMM-19)}{32}{subsection.11.1}%
+\contentsline {subsection}{\numberline {11.2}Replication Invariants (CFMM-20 through CFMM-25)}{35}{subsection.11.2}%
+\contentsline {subsection}{\numberline {11.3}Perpetual Invariants (CFMM-26 through CFMM-28)}{36}{subsection.11.3}%
+\contentsline {subsection}{\numberline {11.4}Fee Concentration State Invariants (FCI-01 through FCI-08)}{36}{subsection.11.4}%
+\contentsline {subsection}{\numberline {11.5}Price Mapping Invariants (FCI-09 through FCI-11)}{37}{subsection.11.5}%
+\contentsline {subsection}{\numberline {11.6}FCI Perpetual Funding Invariants (FCI-12 through FCI-13)}{38}{subsection.11.6}%
+\contentsline {subsection}{\numberline {11.7}Insurance CFMM Invariants (INS-01 through INS-10)}{38}{subsection.11.7}%

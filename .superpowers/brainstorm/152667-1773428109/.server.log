@@ -1,0 +1,23 @@
+{"type":"server-started","port":64320,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:64320","screen_dir":"/home/jmsbpp/apps/ThetaSwap/thetaSwap-core-dev/.superpowers/brainstorm/152667-1773428109"}
+{"type":"screen-added","file":"/home/jmsbpp/apps/ThetaSwap/thetaSwap-core-dev/.superpowers/brainstorm/152667-1773428109/logo-type.html"}
+{"source":"user-event","type":"click","text":"A\n    \n      Logomark Only\n      A standalone symbol or icon — like the Uniswap unicorn, Ethereum diamond, or Aave ghost. Works as favicon, app icon, and brand symbol.","choice":"a","id":null,"timestamp":1773428174240}
+{"source":"user-event","type":"click","text":"A\n    \n      Logomark Only\n      A standalone symbol or icon — like the Uniswap unicorn, Ethereum diamond, or Aave ghost. Works as favicon, app icon, and brand symbol.","choice":"a","id":null,"timestamp":1773428178339}
+{"source":"user-event","type":"click","text":"A\n    \n      Logomark Only\n      A standalone symbol or icon — like the Uniswap unicorn, Ethereum diamond, or Aave ghost. Works as favicon, app icon, and brand symbol.","choice":"a","id":null,"timestamp":1773428194443}
+{"type":"screen-added","file":"/home/jmsbpp/apps/ThetaSwap/thetaSwap-core-dev/.superpowers/brainstorm/152667-1773428109/logo-concept.html"}
+{"type":"screen-added","file":"/home/jmsbpp/apps/ThetaSwap/thetaSwap-core-dev/.superpowers/brainstorm/152667-1773428109/logo-concept-v2.html"}
+{"type":"screen-added","file":"/home/jmsbpp/apps/ThetaSwap/thetaSwap-core-dev/.superpowers/brainstorm/152667-1773428109/logo-style.html"}
+{"type":"screen-added","file":"/home/jmsbpp/apps/ThetaSwap/thetaSwap-core-dev/.superpowers/brainstorm/152667-1773428109/logo-color.html"}
+{"type":"screen-added","file":"/home/jmsbpp/apps/ThetaSwap/thetaSwap-core-dev/.superpowers/brainstorm/152667-1773428109/logo-size.html"}
+{"type":"screen-added","file":"/home/jmsbpp/apps/ThetaSwap/thetaSwap-core-dev/.superpowers/brainstorm/152667-1773428109/logo-delivery.html"}
+{"type":"screen-added","file":"/home/jmsbpp/apps/ThetaSwap/thetaSwap-core-dev/.superpowers/brainstorm/152667-1773428109/approaches.html"}
+{"type":"screen-added","file":"/home/jmsbpp/apps/ThetaSwap/thetaSwap-core-dev/.superpowers/brainstorm/152667-1773428109/design-geometry.html"}
+{"type":"screen-added","file":"/home/jmsbpp/apps/ThetaSwap/thetaSwap-core-dev/.superpowers/brainstorm/152667-1773428109/design-sizes.html"}
+{"type":"screen-added","file":"/home/jmsbpp/apps/ThetaSwap/thetaSwap-core-dev/.superpowers/brainstorm/152667-1773428109/design-color.html"}
+{"type":"screen-added","file":"/home/jmsbpp/apps/ThetaSwap/thetaSwap-core-dev/.superpowers/brainstorm/152667-1773428109/design-geometry-v2.html"}
+{"type":"screen-added","file":"/home/jmsbpp/apps/ThetaSwap/thetaSwap-core-dev/.superpowers/brainstorm/152667-1773428109/design-curve-crossbar.html"}
+{"type":"screen-added","file":"/home/jmsbpp/apps/ThetaSwap/thetaSwap-core-dev/.superpowers/brainstorm/152667-1773428109/design-final-mark.html"}
+{"type":"screen-added","file":"/home/jmsbpp/apps/ThetaSwap/thetaSwap-core-dev/.superpowers/brainstorm/152667-1773428109/design-crossbar-axis.html"}
+{"type":"screen-added","file":"/home/jmsbpp/apps/ThetaSwap/thetaSwap-core-dev/.superpowers/brainstorm/152667-1773428109/design-circular-final.html"}
+{"type":"screen-added","file":"/home/jmsbpp/apps/ThetaSwap/thetaSwap-core-dev/.superpowers/brainstorm/152667-1773428109/design-contained-curve.html"}
+{"type":"screen-added","file":"/home/jmsbpp/apps/ThetaSwap/thetaSwap-core-dev/.superpowers/brainstorm/152667-1773428109/waiting.html"}
+{"type":"server-stopped","reason":"owner process exited"}

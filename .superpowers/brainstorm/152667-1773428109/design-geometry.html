@@ -1,0 +1,65 @@
+<h2>Design Section 1: Core Geometry</h2>
+<p class="subtitle">The foundational construction of the Split Equilibrium logomark</p>
+
+<div class="section">
+  <p class="label">Construction</p>
+  <ul>
+    <li><strong>Base grid:</strong> 120×120 unit viewBox, centered at (60, 60)</li>
+    <li><strong>Outer circle:</strong> radius 33 units, split vertically at x=60</li>
+    <li><strong>Left half-arc:</strong> Full opacity — represents passive LPs (the protected)</li>
+    <li><strong>Right half-arc:</strong> 50% opacity — represents sophisticated agents (JITs)</li>
+    <li><strong>Vertical bisector (lime):</strong> Runs full height of the circle (y: 24→96) — the protocol as equilibrium mechanism</li>
+    <li><strong>Horizontal crossbar:</strong> 30% opacity, spans the full diameter — the "ghost of theta" that identifies the Θ letterform</li>
+    <li><strong>Stroke weight:</strong> 2.5 units for primary elements, 1.5 for secondary</li>
+  </ul>
+</div>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Dark Mode (Primary)</div>
+    <div class="mockup-body" style="display:flex;align-items:center;justify-content:center;min-height:250px;background:#1C1917;">
+      <svg viewBox="0 0 120 120" width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+        <path d="M60,27 A33,33 0 0,0 60,93" fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+        <path d="M60,27 A33,33 0 0,1 60,93" fill="none" stroke="#a8a29e" stroke-width="2.5" opacity="0.5"/>
+        <line x1="60" y1="24" x2="60" y2="96" stroke="#84cc16" stroke-width="2.5"/>
+        <line x1="32" y1="60" x2="88" y2="60" stroke="#FAFAF9" stroke-width="1.5" opacity="0.3"/>
+      </svg>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">Light Mode</div>
+    <div class="mockup-body" style="display:flex;align-items:center;justify-content:center;min-height:250px;background:#FAFAF9;">
+      <svg viewBox="0 0 120 120" width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+        <path d="M60,27 A33,33 0 0,0 60,93" fill="none" stroke="#1C1917" stroke-width="2.5"/>
+        <path d="M60,27 A33,33 0 0,1 60,93" fill="none" stroke="#a8a29e" stroke-width="2.5" opacity="0.5"/>
+        <line x1="60" y1="24" x2="60" y2="96" stroke="#65a30d" stroke-width="2.5"/>
+        <line x1="32" y1="60" x2="88" y2="60" stroke="#1C1917" stroke-width="1.5" opacity="0.3"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:1.5rem;">
+  <p class="label">Semantic Mapping</p>
+  <ul>
+    <li><strong>Left arc (bright):</strong> Passive LPs — the ones being protected. Full presence.</li>
+    <li><strong>Right arc (faded):</strong> Sophisticated agents (JIT, MEV). Present but diminished — their concentration is being measured and counteracted.</li>
+    <li><strong>Vertical lime line:</strong> ThetaSwap itself — the equilibrating protocol that stands between the two forces.</li>
+    <li><strong>Horizontal crossbar (ghost):</strong> The Θ identity — subtly confirms "this is theta" without competing with the narrative.</li>
+  </ul>
+</div>
+
+<div class="options">
+  <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Looks right — continue to next section</h3>
+    </div>
+  </div>
+  <div class="option" data-choice="revise" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content">
+      <h3>Needs changes — I'll explain in terminal</h3>
+    </div>
+  </div>
+</div>

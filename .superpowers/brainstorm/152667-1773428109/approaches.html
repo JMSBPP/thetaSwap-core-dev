@@ -1,0 +1,81 @@
+<h2>Three Logo Approaches</h2>
+<p class="subtitle">All use geometric minimalism, stone monochrome + lime-500 accent, and embed Θ within a distribution/equilibrium concept.</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image" style="display:flex;align-items:center;justify-content:center;min-height:200px;background:#1C1917;padding:2rem;">
+      <svg viewBox="0 0 120 120" width="160" height="160" xmlns="http://www.w3.org/2000/svg">
+        <!-- Approach A: Θ with distribution envelope -->
+        <!-- Bell curve / power-law envelope -->
+        <path d="M10,85 Q35,20 60,35 Q85,20 110,85" fill="none" stroke="#a8a29e" stroke-width="1.5" opacity="0.4"/>
+        <!-- Theta circle -->
+        <circle cx="60" cy="55" r="28" fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+        <!-- Theta crossbar = protection threshold in lime -->
+        <line x1="36" y1="55" x2="84" y2="55" stroke="#84cc16" stroke-width="2.5"/>
+        <!-- Baseline -->
+        <line x1="10" y1="85" x2="110" y2="85" stroke="#a8a29e" stroke-width="1" opacity="0.3"/>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>A — Theta in the Curve</h3>
+      <p>The Θ symbol sits within a faint bell/power-law distribution envelope. The crossbar of theta IS the protection threshold, rendered in lime-500. The distribution fades behind — the theta dominates.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Immediately reads as "theta"</li><li>Distribution adds meaning without clutter</li><li>Lime crossbar = protection level (semantic)</li><li>Works at 16px: just Θ with green bar</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Distribution envelope may vanish at small sizes</li><li>Less "equilibrium" feel, more "measurement"</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image" style="display:flex;align-items:center;justify-content:center;min-height:200px;background:#1C1917;padding:2rem;">
+      <svg viewBox="0 0 120 120" width="160" height="160" xmlns="http://www.w3.org/2000/svg">
+        <!-- Approach B: Split Theta — two halves in tension -->
+        <!-- Left half-circle (passive LPs) -->
+        <path d="M60,27 A33,33 0 0,0 60,93" fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+        <!-- Right half-circle (sophisticated agents) -->
+        <path d="M60,27 A33,33 0 0,1 60,93" fill="none" stroke="#a8a29e" stroke-width="2.5" opacity="0.5"/>
+        <!-- Equilibrium line (lime) — the protocol -->
+        <line x1="60" y1="24" x2="60" y2="96" stroke="#84cc16" stroke-width="2.5"/>
+        <!-- Crossbar whispers of theta -->
+        <line x1="32" y1="60" x2="88" y2="60" stroke="#FAFAF9" stroke-width="1.5" opacity="0.3"/>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>B — Split Equilibrium</h3>
+      <p>Theta split vertically into two halves: bright (passive LPs) vs faded (sophisticated agents). A lime vertical line bisects them — the protocol as equilibrating force. The faint horizontal crossbar whispers "this is a Θ."</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Strong equilibrium/tension narrative</li><li>Two visual weights = two market participants</li><li>Lime line = protocol as mediator</li><li>Distinctive — no other DeFi logo looks like this</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Theta is less immediately obvious</li><li>May read as "split circle" without context</li><li>Asymmetric opacity harder at very small sizes</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image" style="display:flex;align-items:center;justify-content:center;min-height:200px;background:#1C1917;padding:2rem;">
+      <svg viewBox="0 0 120 120" width="160" height="160" xmlns="http://www.w3.org/2000/svg">
+        <!-- Approach C: Theta emerging from concentration gradient -->
+        <!-- Stacked horizontal bars — concentration levels (like a histogram) -->
+        <rect x="42" y="78" width="36" height="3" rx="1" fill="#a8a29e" opacity="0.15"/>
+        <rect x="38" y="72" width="44" height="3" rx="1" fill="#a8a29e" opacity="0.2"/>
+        <rect x="34" y="66" width="52" height="3" rx="1" fill="#a8a29e" opacity="0.25"/>
+        <rect x="30" y="60" width="60" height="3" rx="1" fill="#a8a29e" opacity="0.3"/>
+        <!-- Theta sits on top, emerging from the data -->
+        <circle cx="60" cy="42" r="22" fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+        <!-- Theta crossbar in lime -->
+        <line x1="42" y1="42" x2="78" y2="42" stroke="#84cc16" stroke-width="2.5"/>
+        <!-- Connecting stem -->
+        <line x1="60" y1="64" x2="60" y2="80" stroke="#FAFAF9" stroke-width="1.5" opacity="0.3"/>
+      </svg>
+    </div>
+    <div class="card-body">
+      <h3>C — Theta Rising from Data</h3>
+      <p>Horizontal bars form a concentration histogram/gradient at the base. The Θ symbol emerges from the top — the protocol that makes sense of the data. Lime crossbar marks the threshold. A faint stem connects theta to the data below.</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Pros</h4><ul><li>Strongest "data-driven" feel</li><li>Theta clearly recognizable</li><li>Histogram = concentration measurement</li><li>Narrative: insight emerges from data</li></ul></div>
+        <div class="cons"><h4>Cons</h4><ul><li>Most complex — harder to simplify for favicon</li><li>Vertical composition may not fit all layouts</li><li>Less "equilibrium," more "analytics"</li></ul></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:1.5rem;">These are rough geometric sketches — final SVGs will be precisely constructed on a grid. Click the one that resonates most, or tell me what to combine.</p>

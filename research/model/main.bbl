@@ -1,0 +1,51 @@
+\newcommand{\etalchar}[1]{$^{#1}$}
+\begin{thebibliography}{ACD{\etalchar{+}}23}
+
+\bibitem[ACD{\etalchar{+}}23]{angeris2023geometry}
+Guillermo Angeris, Tarun Chitra, Theo Diamandis, Alex Evans, and Kshitij
+  Kulkarni.
+\newblock The geometry of constant function market makers.
+\newblock {\em arXiv preprint}, 2023.
+\newblock \url{https://arxiv.org/abs/2308.08066}.
+
+\bibitem[AEC21]{angeris2021replicating}
+Guillermo Angeris, Alex Evans, and Tarun Chitra.
+\newblock Replicating market makers.
+\newblock {\em arXiv preprint}, 2021.
+\newblock \url{https://arxiv.org/abs/2103.14769}.
+
+\bibitem[AECB22]{angeris2022perpetuals}
+Guillermo Angeris, Alex Evans, Tarun Chitra, and Stephen Boyd.
+\newblock A primer on perpetuals.
+\newblock {\em arXiv preprint}, 2022.
+\newblock \url{https://arxiv.org/abs/2209.03307}.
+
+\bibitem[BBJ18]{batog2018scalable}
+Bogdan Batog, Lucian Boca, and Nick Johnson.
+\newblock Scalable reward distribution on the {Ethereum} blockchain.
+\newblock {\em White paper}, 2018.
+\newblock Synthetix staking pattern for O(1) per-position fee/reward
+  distribution.
+
+\bibitem[CJZ24]{capponi2024jit}
+Agostino Capponi, Ruizhe Jia, and Ruizhe Zhu.
+\newblock The economics of just-in-time liquidity.
+\newblock {\em Working paper}, 2024.
+\newblock JIT LP fee dilution and realized fee share asymmetry.
+
+\bibitem[Lei24]{leifke2024powermaker}
+Tim Leifke.
+\newblock gammadex: Oracle-free power perpetuals.
+\newblock {\em White paper}, 2024.
+\newblock PowerMaker/Lendgine architecture: $\varphi(R_1, R_2) = R_1 - (k -
+  \tfrac{1}{2}R_2)^2$; LP payoff $V(p) = 2pk - p^2$; Borrower payoff $N(p) =
+  p^2$ for $p \in [0, k]$.
+  \url{https://github.com/wvs-finance/gammaDEX-contracts}.
+
+\bibitem[MC24]{macrapis2024permissionless}
+Yichen Ma and Davide Crapis.
+\newblock Decentralized exchanges: The uniswap amm.
+\newblock {\em Working paper}, 2024.
+\newblock Symmetric equilibrium $x_k = 1/N$ as competitive null hypothesis.
+
+\end{thebibliography}

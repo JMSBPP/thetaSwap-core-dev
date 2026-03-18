@@ -1,0 +1,118 @@
+<h2>Revised Geometry: Proper Uppercase Θ</h2>
+<p class="subtitle">The mark must read as the LaTeX uppercase Theta — an ellipse with horizontal bar, NOT a solar cross</p>
+
+<div class="section">
+  <p class="label">What changed</p>
+  <ul>
+    <li><strong>Removed:</strong> Vertical lime bisector (caused solar cross reading)</li>
+    <li><strong>Shape:</strong> Circle → <strong>Ellipse</strong> (taller than wide, ~1.25:1 ratio, matching LaTeX Θ proportions)</li>
+    <li><strong>Horizontal bar:</strong> Promoted from ghost to <strong>primary lime element</strong> — this IS the theta crossbar AND the protection threshold</li>
+    <li><strong>Equilibrium split:</strong> Expressed via left/right opacity contrast on the ellipse halves — no extra line needed</li>
+  </ul>
+</div>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Before (Solar Cross ✗)</div>
+    <div class="mockup-body" style="display:flex;align-items:center;justify-content:center;min-height:250px;background:#1C1917;">
+      <svg viewBox="0 0 120 120" width="180" height="180" xmlns="http://www.w3.org/2000/svg">
+        <path d="M60,27 A33,33 0 0,0 60,93" fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+        <path d="M60,27 A33,33 0 0,1 60,93" fill="none" stroke="#a8a29e" stroke-width="2.5" opacity="0.5"/>
+        <line x1="60" y1="24" x2="60" y2="96" stroke="#84cc16" stroke-width="2.5"/>
+        <line x1="32" y1="60" x2="88" y2="60" stroke="#FAFAF9" stroke-width="1.5" opacity="0.3"/>
+        <!-- X mark -->
+        <line x1="95" y1="15" x2="110" y2="30" stroke="#ef4444" stroke-width="2"/>
+        <line x1="110" y1="15" x2="95" y2="30" stroke="#ef4444" stroke-width="2"/>
+      </svg>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">After (Proper Θ ✓)</div>
+    <div class="mockup-body" style="display:flex;align-items:center;justify-content:center;min-height:250px;background:#1C1917;">
+      <svg viewBox="0 0 120 140" width="160" height="187" xmlns="http://www.w3.org/2000/svg">
+        <!-- Left half of ellipse: passive LPs (bright) -->
+        <path d="M60,18 A27,42 0 0,0 60,122" fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+        <!-- Right half of ellipse: sophisticated agents (faded) -->
+        <path d="M60,18 A27,42 0 0,1 60,122" fill="none" stroke="#a8a29e" stroke-width="2.5" opacity="0.5"/>
+        <!-- Theta crossbar = protection threshold (lime) -->
+        <line x1="33" y1="70" x2="87" y2="70" stroke="#84cc16" stroke-width="2.5"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:1.5rem;">
+  <p class="label">Revised Construction</p>
+  <ul>
+    <li><strong>Ellipse:</strong> 120×140 viewBox. Radii: rx=27, ry=42 (ratio ≈ 1:1.56, matching LaTeX Computer Modern Θ)</li>
+    <li><strong>Left half-arc (bright):</strong> <code>#FAFAF9</code> at 100% — passive LPs</li>
+    <li><strong>Right half-arc (faded):</strong> <code>#a8a29e</code> at 50% — sophisticated agents</li>
+    <li><strong>Horizontal crossbar (lime):</strong> <code>#84cc16</code> at 100% — spans the full width of the ellipse. This is both the Θ identity AND the protection threshold.</li>
+    <li><strong>No vertical line.</strong> The equilibrium is encoded in the brightness asymmetry, not a bisecting line.</li>
+  </ul>
+</div>
+
+<div class="section" style="margin-top:1rem;">
+  <p class="label">Semantic Mapping (Updated)</p>
+  <ul>
+    <li><strong>Left arc (bright):</strong> Passive LPs — the protected side. Full presence.</li>
+    <li><strong>Right arc (faded):</strong> Sophisticated agents — measured and counteracted. Diminished.</li>
+    <li><strong>Lime crossbar:</strong> Dual meaning — (1) the defining feature of Θ, (2) the protection threshold / equilibrium line that the protocol enforces.</li>
+    <li><strong>Overall read:</strong> "Theta" first, equilibrium narrative second. No ambiguity.</li>
+  </ul>
+</div>
+
+<div style="display:flex;gap:3rem;align-items:flex-end;justify-content:center;padding:2rem;background:#1C1917;border-radius:0.75rem;margin-top:1.5rem;">
+  <!-- Large -->
+  <div style="text-align:center;">
+    <svg viewBox="0 0 120 140" width="120" height="140" xmlns="http://www.w3.org/2000/svg">
+      <path d="M60,18 A27,42 0 0,0 60,122" fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+      <path d="M60,18 A27,42 0 0,1 60,122" fill="none" stroke="#a8a29e" stroke-width="2.5" opacity="0.5"/>
+      <line x1="33" y1="70" x2="87" y2="70" stroke="#84cc16" stroke-width="2.5"/>
+    </svg>
+    <p style="color:#FAFAF9;font-size:0.7rem;margin-top:0.5rem;opacity:0.6;">Hero</p>
+  </div>
+  <!-- Medium -->
+  <div style="text-align:center;">
+    <svg viewBox="0 0 120 140" width="40" height="47" xmlns="http://www.w3.org/2000/svg">
+      <path d="M60,18 A27,42 0 0,0 60,122" fill="none" stroke="#FAFAF9" stroke-width="4"/>
+      <path d="M60,18 A27,42 0 0,1 60,122" fill="none" stroke="#a8a29e" stroke-width="4" opacity="0.5"/>
+      <line x1="33" y1="70" x2="87" y2="70" stroke="#84cc16" stroke-width="4"/>
+    </svg>
+    <p style="color:#FAFAF9;font-size:0.7rem;margin-top:0.5rem;opacity:0.6;">Nav</p>
+  </div>
+  <!-- Favicon -->
+  <div style="text-align:center;">
+    <svg viewBox="0 0 120 140" width="18" height="21" xmlns="http://www.w3.org/2000/svg">
+      <path d="M60,18 A27,42 0 0,0 60,122" fill="none" stroke="#FAFAF9" stroke-width="7"/>
+      <path d="M60,18 A27,42 0 0,1 60,122" fill="none" stroke="#a8a29e" stroke-width="7" opacity="0.45"/>
+      <line x1="33" y1="70" x2="87" y2="70" stroke="#84cc16" stroke-width="7"/>
+    </svg>
+    <p style="color:#FAFAF9;font-size:0.7rem;margin-top:0.5rem;opacity:0.6;">Favicon</p>
+  </div>
+  <!-- Token -->
+  <div style="text-align:center;">
+    <svg viewBox="0 0 140 140" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="70" cy="70" r="68" fill="#292524" stroke="#44403c" stroke-width="2"/>
+      <path d="M70,25 A24,37 0 0,0 70,115" fill="none" stroke="#FAFAF9" stroke-width="4.5"/>
+      <path d="M70,25 A24,37 0 0,1 70,115" fill="none" stroke="#a8a29e" stroke-width="4.5" opacity="0.5"/>
+      <line x1="46" y1="70" x2="94" y2="70" stroke="#84cc16" stroke-width="4.5"/>
+    </svg>
+    <p style="color:#FAFAF9;font-size:0.7rem;margin-top:0.5rem;opacity:0.6;">Token</p>
+  </div>
+</div>
+
+<div class="options" style="margin-top:1.5rem;">
+  <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>This reads as Theta now — approve and continue</h3>
+    </div>
+  </div>
+  <div class="option" data-choice="revise" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content">
+      <h3>Still needs adjustment — I'll explain</h3>
+    </div>
+  </div>
+</div>

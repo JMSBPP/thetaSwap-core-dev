@@ -1,0 +1,116 @@
+<h2>Design Section 3: Color Specification</h2>
+<p class="subtitle">Exact color values for every element across modes and fallback contexts</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Dark Mode</div>
+    <div class="mockup-body" style="display:flex;align-items:center;justify-content:center;min-height:200px;background:#1C1917;">
+      <svg viewBox="0 0 120 120" width="160" height="160" xmlns="http://www.w3.org/2000/svg">
+        <path d="M60,27 A33,33 0 0,0 60,93" fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+        <path d="M60,27 A33,33 0 0,1 60,93" fill="none" stroke="#a8a29e" stroke-width="2.5" opacity="0.5"/>
+        <line x1="60" y1="24" x2="60" y2="96" stroke="#84cc16" stroke-width="2.5"/>
+        <line x1="32" y1="60" x2="88" y2="60" stroke="#FAFAF9" stroke-width="1.5" opacity="0.3"/>
+      </svg>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">Light Mode</div>
+    <div class="mockup-body" style="display:flex;align-items:center;justify-content:center;min-height:200px;background:#FAFAF9;">
+      <svg viewBox="0 0 120 120" width="160" height="160" xmlns="http://www.w3.org/2000/svg">
+        <path d="M60,27 A33,33 0 0,0 60,93" fill="none" stroke="#1C1917" stroke-width="2.5"/>
+        <path d="M60,27 A33,33 0 0,1 60,93" fill="none" stroke="#a8a29e" stroke-width="2.5" opacity="0.5"/>
+        <line x1="60" y1="24" x2="60" y2="96" stroke="#65a30d" stroke-width="2.5"/>
+        <line x1="32" y1="60" x2="88" y2="60" stroke="#1C1917" stroke-width="1.5" opacity="0.3"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<div class="split" style="margin-top:1.5rem;">
+  <div class="mockup">
+    <div class="mockup-header">Monochrome Fallback (Print / Emboss)</div>
+    <div class="mockup-body" style="display:flex;align-items:center;justify-content:center;min-height:200px;background:#ffffff;">
+      <svg viewBox="0 0 120 120" width="160" height="160" xmlns="http://www.w3.org/2000/svg">
+        <path d="M60,27 A33,33 0 0,0 60,93" fill="none" stroke="#1C1917" stroke-width="2.5"/>
+        <path d="M60,27 A33,33 0 0,1 60,93" fill="none" stroke="#1C1917" stroke-width="2.5" opacity="0.4"/>
+        <line x1="60" y1="24" x2="60" y2="96" stroke="#1C1917" stroke-width="2.5"/>
+        <line x1="32" y1="60" x2="88" y2="60" stroke="#1C1917" stroke-width="1.5" opacity="0.3"/>
+      </svg>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">Inverted Monochrome (Dark Print)</div>
+    <div class="mockup-body" style="display:flex;align-items:center;justify-content:center;min-height:200px;background:#1C1917;">
+      <svg viewBox="0 0 120 120" width="160" height="160" xmlns="http://www.w3.org/2000/svg">
+        <path d="M60,27 A33,33 0 0,0 60,93" fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+        <path d="M60,27 A33,33 0 0,1 60,93" fill="none" stroke="#FAFAF9" stroke-width="2.5" opacity="0.4"/>
+        <line x1="60" y1="24" x2="60" y2="96" stroke="#FAFAF9" stroke-width="2.5"/>
+        <line x1="32" y1="60" x2="88" y2="60" stroke="#FAFAF9" stroke-width="1.5" opacity="0.3"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:1.5rem;">
+  <p class="label">Color Table</p>
+  <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+    <thead>
+      <tr style="border-bottom:1px solid #44403c;">
+        <th style="text-align:left;padding:0.5rem;">Element</th>
+        <th style="text-align:left;padding:0.5rem;">Dark Mode</th>
+        <th style="text-align:left;padding:0.5rem;">Light Mode</th>
+        <th style="text-align:left;padding:0.5rem;">Mono Fallback</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #292524;">
+        <td style="padding:0.5rem;">Left arc (passive LPs)</td>
+        <td style="padding:0.5rem;"><code>#FAFAF9</code> stone-50, 100%</td>
+        <td style="padding:0.5rem;"><code>#1C1917</code> stone-900, 100%</td>
+        <td style="padding:0.5rem;">Foreground, 100%</td>
+      </tr>
+      <tr style="border-bottom:1px solid #292524;">
+        <td style="padding:0.5rem;">Right arc (agents)</td>
+        <td style="padding:0.5rem;"><code>#a8a29e</code> stone-400, 50%</td>
+        <td style="padding:0.5rem;"><code>#a8a29e</code> stone-400, 50%</td>
+        <td style="padding:0.5rem;">Foreground, 40%</td>
+      </tr>
+      <tr style="border-bottom:1px solid #292524;">
+        <td style="padding:0.5rem;">Vertical bisector (protocol)</td>
+        <td style="padding:0.5rem;"><code>#84cc16</code> lime-500, 100%</td>
+        <td style="padding:0.5rem;"><code>#65a30d</code> lime-600, 100%</td>
+        <td style="padding:0.5rem;">Foreground, 100%</td>
+      </tr>
+      <tr>
+        <td style="padding:0.5rem;">Horizontal crossbar (ghost Θ)</td>
+        <td style="padding:0.5rem;"><code>#FAFAF9</code> stone-50, 30%</td>
+        <td style="padding:0.5rem;"><code>#1C1917</code> stone-900, 30%</td>
+        <td style="padding:0.5rem;">Foreground, 30%</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section" style="margin-top:1rem;">
+  <p class="label">Notes</p>
+  <ul>
+    <li>Light mode uses <strong>lime-600</strong> (#65a30d) instead of lime-500 for sufficient contrast against white/light backgrounds (WCAG AA).</li>
+    <li>Monochrome fallback: all elements use a single foreground color; opacity alone creates the visual hierarchy.</li>
+    <li>Token icon container: <code>#292524</code> (stone-800) fill, <code>#44403c</code> (stone-700) border — same in both modes.</li>
+  </ul>
+</div>
+
+<div class="options" style="margin-top:1.5rem;">
+  <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Looks right — continue to next section</h3>
+    </div>
+  </div>
+  <div class="option" data-choice="revise" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content">
+      <h3>Needs changes — I'll explain in terminal</h3>
+    </div>
+  </div>
+</div>

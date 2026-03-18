@@ -1,0 +1,161 @@
+<h2>Revised: Crossbar as X-Axis + Curve Emerging Above</h2>
+<p class="subtitle">The Θ horizontal bar is always present (straight line). The power-law curve rises from it like a distribution plotted on its axis.</p>
+
+<div class="section">
+  <p class="label">Construction</p>
+  <ul>
+    <li><strong>Horizontal crossbar (straight):</strong> Always present — this IS the theta bar. Spans full ellipse width. Gives the Θ read at any size.</li>
+    <li><strong>Power-law curve:</strong> Emerges upward from the crossbar. Starts at the left edge of the bar, peaks, then decays back down to the bar on the right. The crossbar is its x-axis.</li>
+    <li><strong>Color version:</strong> Crossbar in stone (matches arcs), curve in lime — the data rises from the structure.</li>
+    <li><strong>Monochrome:</strong> Both crossbar and curve in foreground color, differentiated by opacity or weight.</li>
+  </ul>
+</div>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Dark Mode (Primary)</div>
+    <div class="mockup-body" style="display:flex;align-items:center;justify-content:center;min-height:280px;background:#1C1917;">
+      <svg viewBox="0 0 120 140" width="180" height="210" xmlns="http://www.w3.org/2000/svg">
+        <!-- Left half of ellipse (passive LPs, bright) -->
+        <path d="M60,18 A27,42 0 0,0 60,122" fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+        <!-- Right half of ellipse (sophisticated agents, faded) -->
+        <path d="M60,18 A27,42 0 0,1 60,122" fill="none" stroke="#a8a29e" stroke-width="2.5" opacity="0.5"/>
+        <!-- Theta crossbar (straight, stone — the x-axis) -->
+        <line x1="33" y1="70" x2="87" y2="70" stroke="#FAFAF9" stroke-width="1.5" opacity="0.4"/>
+        <!-- Power-law curve emerging upward from the crossbar -->
+        <path d="M33,70 C35,62 38,46 42,38 C46,34 50,36 54,42 C60,52 66,62 72,66 C78,68 84,69 87,70" fill="none" stroke="#84cc16" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">Light Mode</div>
+    <div class="mockup-body" style="display:flex;align-items:center;justify-content:center;min-height:280px;background:#FAFAF9;">
+      <svg viewBox="0 0 120 140" width="180" height="210" xmlns="http://www.w3.org/2000/svg">
+        <path d="M60,18 A27,42 0 0,0 60,122" fill="none" stroke="#1C1917" stroke-width="2.5"/>
+        <path d="M60,18 A27,42 0 0,1 60,122" fill="none" stroke="#a8a29e" stroke-width="2.5" opacity="0.5"/>
+        <line x1="33" y1="70" x2="87" y2="70" stroke="#1C1917" stroke-width="1.5" opacity="0.4"/>
+        <path d="M33,70 C35,62 38,46 42,38 C46,34 50,36 54,42 C60,52 66,62 72,66 C78,68 84,69 87,70" fill="none" stroke="#65a30d" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<div class="split" style="margin-top:1.5rem;">
+  <div class="mockup">
+    <div class="mockup-header">Monochrome Fallback</div>
+    <div class="mockup-body" style="display:flex;align-items:center;justify-content:center;min-height:280px;background:#ffffff;">
+      <svg viewBox="0 0 120 140" width="180" height="210" xmlns="http://www.w3.org/2000/svg">
+        <path d="M60,18 A27,42 0 0,0 60,122" fill="none" stroke="#1C1917" stroke-width="2.5"/>
+        <path d="M60,18 A27,42 0 0,1 60,122" fill="none" stroke="#1C1917" stroke-width="2.5" opacity="0.4"/>
+        <line x1="33" y1="70" x2="87" y2="70" stroke="#1C1917" stroke-width="1.5" opacity="0.35"/>
+        <path d="M33,70 C35,62 38,46 42,38 C46,34 50,36 54,42 C60,52 66,62 72,66 C78,68 84,69 87,70" fill="none" stroke="#1C1917" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+  <div class="mockup">
+    <div class="mockup-header">Inverted Monochrome</div>
+    <div class="mockup-body" style="display:flex;align-items:center;justify-content:center;min-height:280px;background:#1C1917;">
+      <svg viewBox="0 0 120 140" width="180" height="210" xmlns="http://www.w3.org/2000/svg">
+        <path d="M60,18 A27,42 0 0,0 60,122" fill="none" stroke="#FAFAF9" stroke-width="2.5"/>
+        <path d="M60,18 A27,42 0 0,1 60,122" fill="none" stroke="#FAFAF9" stroke-width="2.5" opacity="0.4"/>
+        <line x1="33" y1="70" x2="87" y2="70" stroke="#FAFAF9" stroke-width="1.5" opacity="0.35"/>
+        <path d="M33,70 C35,62 38,46 42,38 C46,34 50,36 54,42 C60,52 66,62 72,66 C78,68 84,69 87,70" fill="none" stroke="#FAFAF9" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:1.5rem;">
+  <p class="label">Element Hierarchy (4 elements)</p>
+  <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+    <thead>
+      <tr style="border-bottom:1px solid #44403c;">
+        <th style="text-align:left;padding:0.5rem;">Element</th>
+        <th style="text-align:left;padding:0.5rem;">Role</th>
+        <th style="text-align:left;padding:0.5rem;">Dark</th>
+        <th style="text-align:left;padding:0.5rem;">Light</th>
+        <th style="text-align:left;padding:0.5rem;">Mono</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #292524;">
+        <td style="padding:0.5rem;">Left arc</td>
+        <td style="padding:0.5rem;">Passive LPs</td>
+        <td style="padding:0.5rem;">#FAFAF9 100%</td>
+        <td style="padding:0.5rem;">#1C1917 100%</td>
+        <td style="padding:0.5rem;">FG 100%</td>
+      </tr>
+      <tr style="border-bottom:1px solid #292524;">
+        <td style="padding:0.5rem;">Right arc</td>
+        <td style="padding:0.5rem;">Sophisticated agents</td>
+        <td style="padding:0.5rem;">#a8a29e 50%</td>
+        <td style="padding:0.5rem;">#a8a29e 50%</td>
+        <td style="padding:0.5rem;">FG 40%</td>
+      </tr>
+      <tr style="border-bottom:1px solid #292524;">
+        <td style="padding:0.5rem;">Crossbar (straight)</td>
+        <td style="padding:0.5rem;">Θ identity + x-axis</td>
+        <td style="padding:0.5rem;">#FAFAF9 40%</td>
+        <td style="padding:0.5rem;">#1C1917 40%</td>
+        <td style="padding:0.5rem;">FG 35%</td>
+      </tr>
+      <tr>
+        <td style="padding:0.5rem;">Power-law curve</td>
+        <td style="padding:0.5rem;">Distribution / protection</td>
+        <td style="padding:0.5rem;">#84cc16 100%</td>
+        <td style="padding:0.5rem;">#65a30d 100%</td>
+        <td style="padding:0.5rem;">FG 100%</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="section" style="margin-top:1rem;">
+  <p class="label">Size Simplification (Updated)</p>
+  <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+    <thead>
+      <tr style="border-bottom:1px solid #44403c;">
+        <th style="text-align:left;padding:0.5rem;">Tier</th>
+        <th style="text-align:left;padding:0.5rem;">Size</th>
+        <th style="text-align:left;padding:0.5rem;">Elements</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #292524;">
+        <td style="padding:0.5rem;">Hero</td>
+        <td style="padding:0.5rem;">64px+</td>
+        <td style="padding:0.5rem;">All 4: both arcs, crossbar, curve</td>
+      </tr>
+      <tr style="border-bottom:1px solid #292524;">
+        <td style="padding:0.5rem;">Nav</td>
+        <td style="padding:0.5rem;">24–48px</td>
+        <td style="padding:0.5rem;">All 4, thicker strokes</td>
+      </tr>
+      <tr style="border-bottom:1px solid #292524;">
+        <td style="padding:0.5rem;">Favicon</td>
+        <td style="padding:0.5rem;">16px</td>
+        <td style="padding:0.5rem;">Both arcs + simplified curve (drop crossbar — curve implies it)</td>
+      </tr>
+      <tr>
+        <td style="padding:0.5rem;">Token</td>
+        <td style="padding:0.5rem;">32–48px</td>
+        <td style="padding:0.5rem;">All 4 in circular container, thicker strokes</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="options" style="margin-top:1.5rem;">
+  <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Approve full design — proceed to write spec document</h3>
+    </div>
+  </div>
+  <div class="option" data-choice="revise" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content">
+      <h3>Needs changes — I'll explain</h3>
+    </div>
+  </div>
+</div>

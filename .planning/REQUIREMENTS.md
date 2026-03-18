@@ -19,9 +19,9 @@
 
 ### Root README
 
-- [ ] **ROOT-01**: Root README.md has brief project description and Architecture section with both mermaid diagrams
-- [ ] **ROOT-02**: Root README contains strategic pointers to sections of interest (research/, src/, test/)
-- [ ] **ROOT-03**: Root README is accessible to mixed audience — brief, high-level, not dense
+- [x] **ROOT-01**: Root README.md has brief project description and Architecture section with both mermaid diagrams
+- [x] **ROOT-02**: Root README contains strategic pointers to sections of interest (research/, src/, test/)
+- [x] **ROOT-03**: Root README is accessible to mixed audience — brief, high-level, not dense
 
 ### Research README
 
@@ -31,8 +31,8 @@
 
 ### Demo
 
-- [ ] **DEMO-01**: Demo script documented — runs NativeV4FeeConcentrationIndex.integration.t.sol with forge command
-- [ ] **DEMO-02**: Demo shows FCI tracking through real swap/mint/burn scenarios on V4
+- [x] **DEMO-01**: Demo script documented — runs NativeV4FeeConcentrationIndex.integration.t.sol with forge command
+- [x] **DEMO-02**: Demo shows FCI tracking through real swap/mint/burn scenarios on V4
 
 ### Beamer Slides
 
@@ -69,14 +69,14 @@
 | ARCH-01 | Phase 2 | Complete |
 | ARCH-02 | Phase 2 | Complete |
 | ARCH-03 | Phase 2 | Complete |
-| ROOT-01 | Phase 3 | Pending |
-| ROOT-02 | Phase 3 | Pending |
-| ROOT-03 | Phase 3 | Pending |
+| ROOT-01 | Phase 3 | Complete |
+| ROOT-02 | Phase 3 | Complete |
+| ROOT-03 | Phase 3 | Complete |
 | RREAD-01 | Phase 3 | Pending |
 | RREAD-02 | Phase 3 | Pending |
 | RREAD-03 | Phase 3 | Pending |
-| DEMO-01 | Phase 3 | Pending |
-| DEMO-02 | Phase 3 | Pending |
+| DEMO-01 | Phase 3 | Complete |
+| DEMO-02 | Phase 3 | Complete |
 | BEAM-01 | Phase 4 | Pending |
 | BEAM-02 | Phase 4 | Pending |
 | BEAM-03 | Phase 4 | Pending |

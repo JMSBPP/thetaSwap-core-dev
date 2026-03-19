@@ -11,12 +11,11 @@ build: install verify-data test notebooks
 
 # ── Setup ────────────────────────────────────────────────────────────
 install:
-	forge install
-	@# Nested submodules forge doesn't handle
+	git submodule update --init --depth 1 --jobs 4
 	git -C lib/uniswap-hooks submodule update --init --depth 1 --jobs 4 -- \
 		lib/v4-core lib/openzeppelin-contracts lib/v4-periphery
 	git -C lib/uniswap-hooks/lib/v4-core submodule update --init --depth 1 -- lib/solmate
-	git -C lib/v4-periphery submodule update --init --depth 1 -- lib/permit2
+	git -C lib/uniswap-hooks/lib/v4-periphery submodule update --init --depth 1 -- lib/permit2
 	git -C lib/typed-uniswap-v4 submodule update --init --depth 1 -- lib/foundational-hooks
 	uv venv $(VENV) --python 3.13
 	uv pip install --python $(PYTHON) -e ".[dev]"

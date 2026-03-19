@@ -320,7 +320,44 @@ On that day, $\DeltaPlus$ jumped from near-zero to \textbf{0.158}.
 
 \end{frame}
 
-% ── Frame 7: Solution — Architecture ─────────────────────────────────────────
+% ── Frame: Solution — On-Chain Algorithm ──────────────────────────────────────
+\begin{frame}[fragile]{On-Chain Algorithm}
+
+At each position exit (\texttt{afterRemoveLiquidity}):
+
+\medskip
+
+\begin{enumerate}
+  \item Compute fee share:
+    $x_k = \dfrac{\texttt{feeGrowth}_k - \texttt{baseline}_k}{\texttt{rangeFeeGrowth}} \cdot \dfrac{\texttt{posLiq}}{\texttt{totalRangeLiq}}$
+
+  \medskip
+
+  \item Compute theta weight:
+    $\thetapos_k = 1 / \texttt{blockLifetime}_k$
+
+  \medskip
+
+  \item Accumulate into state:
+    $\AT^2 \mathrel{+}= \thetapos_k \cdot x_k^2$
+
+  \medskip
+
+  \item Derive on the fly:
+    $\DeltaPlus = \max(0,\; \sqrt{\AT^2} - \ATnull)$
+\end{enumerate}
+
+\medskip
+
+All computed on-chain in a single V4 hook callback --- no keeper, no oracle.
+
+\medskip
+
+{\footnotesize Source: \texttt{src/fee-concentration-index-v2/FeeConcentrationIndexV2.sol}, lines 264--287.}
+
+\end{frame}
+
+% ── Frame: Solution — Architecture ───────────────────────────────────────────
 \begin{frame}{Architecture}
 
 \begin{center}

@@ -468,11 +468,14 @@ state on a Sepolia fork via \texttt{forge test}.
 
 \textbf{What to observe:}
 \begin{enumerate}\small
-  \item Swap updates $\AT$ --- fee concentration index tracks each trade
-  \item Mint increments $\PosCount$ --- new positions enter the pool
-  \item Burn triggers $\DeltaPlus$ derivation --- exit computes concentration
-    deviation
-  \item All metrics computed on-chain in a single V4 hook callback
+  \item \textbf{Equilibrium scenario} --- symmetric LPs, equal fee shares
+    $\Rightarrow$ $\DeltaPlus \approx 0$
+  \item \textbf{Crowding-out scenario} --- JIT-style position captures
+    disproportionate fees $\Rightarrow$ $\DeltaPlus$ spikes above $\DeltaStar$
+  \item \textbf{Mixed scenario} --- combination of passive and sophisticated LPs
+    $\Rightarrow$ shelter regime vs adverse regime in the same pool
+  \item All metrics computed on-chain, verified against Python-generated
+    expected values
 \end{enumerate}
 
 \medskip

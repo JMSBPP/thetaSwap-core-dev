@@ -66,26 +66,46 @@
 % ── Frame 2: Problem — The Risk Nobody Hedges ────────────────────────────────
 \begin{frame}{The Risk Nobody Hedges}
 
-In a symmetric equilibrium, each of $\PosCount$ LPs earns $1/\PosCount$ of
-fees \citep{macrapis2024permissionless}. In practice, sophisticated actors
-concentrate fee revenue away from passive participants.
-This is \textbf{adverse competition} --- a distinct, unhedged risk.
+\textbf{Claim:} Even if impermanent loss is zero, passive LPs carry residual
+risk from the \emph{competition structure} of fee revenue
+\citep{capponi2024jit, aquilina2024dealers}.
 
 \bigskip
 
-\begin{itemize}
-  \item \textbf{Impermanent loss (IL)} --- price divergence between pool assets.
-    Variance perpetuals perfectly hedge IL
-    \citep{fukasawa2023weighted}; Panoptic deploys this on-chain.
+\begin{center}
+$\Pi_{\text{LP}} = \dfrac{\text{Fee Revenue}}{1 + \text{LVC}} - \text{LVR}$
+\end{center}
 
-  \item \textbf{Loss-versus-rebalancing (LVR)} --- adverse selection cost from
-    informed traders. MEV-aware products address LVR.
+\medskip
 
-  \item \textbf{Fee concentration risk} --- the \emph{competition structure}
-    among LPs for fee revenue, captured by the FLAIR metric
-    \citep{milionis2024flair}.
-    \textcolor{red}{\textbf{Nothing hedges this today.}}
-\end{itemize}
+{\small
+\textbf{LVR} = Loss Versus Rebalancing (adverse selection) \quad
+\textbf{LVC} = Loss Versus Competition (adverse competition, $\approx \DeltaPlus$;
+isomorphic to FLAIR \citep{milionis2024flair})
+}
+
+\bigskip
+
+\renewcommand{\arraystretch}{1.6}
+\begin{tabular}{@{}lcp{6.5cm}@{}}
+\toprule
+\textbf{Risk factor} & & \textbf{Hedging instrument} \\
+\midrule
+IL / LVR & $\longrightarrow$ & Variance perpetuals (long volatility)
+  \citep{fukasawa2023weighted}; deployed by Panoptic
+  \citep{kristensen2024perpetual} \\
+LVC & $\longrightarrow$ & \textcolor{red}{\textbf{??}} \\
+\bottomrule
+\end{tabular}
+
+
+%note: This goes centered on the next slide
+\bigskip
+
+If passive LPs are economically \emph{short} fee concentration, then an
+on-chain index that tracks concentration in real time enables instruments
+whose payoff is tied to it --- letting LPs hedge or insure against adverse
+competition.
 
 \end{frame}
 
@@ -97,6 +117,7 @@ competition? If so, how much are LPs willing to pay?}
 
 \bigskip
 
+%note: Include the dates we analyzed
 \begin{block}{Data}
 ETH/USDC 30bps pool (Uniswap V3 mainnet) \\
 41 days $\cdot$ 600 positions $\cdot$ 3,365 position-day observations $\cdot$ 597 exits

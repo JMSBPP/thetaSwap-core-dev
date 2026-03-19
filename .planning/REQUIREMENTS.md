@@ -38,9 +38,9 @@
 
 - [x] **BEAM-01**: LaTeX Beamer .tex file with problem frame(s) synthesized from research
 - [x] **BEAM-02**: LaTeX Beamer research summary frame(s) (approach, key results, demand identification)
-- [ ] **BEAM-03**: LaTeX Beamer solution frame(s) with architecture diagram reference
-- [ ] **BEAM-04**: LaTeX Beamer demo frame(s) with run instructions
-- [ ] **BEAM-05**: LaTeX Beamer roadmap frame(s) — missing CFMM, missing vault/settlement, framed as next steps
+- [x] **BEAM-03**: LaTeX Beamer solution frame(s) with architecture diagram reference
+- [x] **BEAM-04**: LaTeX Beamer demo frame(s) with run instructions
+- [x] **BEAM-05**: LaTeX Beamer roadmap frame(s) — missing CFMM, missing vault/settlement, framed as next steps
 
 ## v2 Requirements
 
@@ -79,9 +79,9 @@
 | DEMO-02 | Phase 3 | Complete |
 | BEAM-01 | Phase 4 | Complete |
 | BEAM-02 | Phase 4 | Complete |
-| BEAM-03 | Phase 4 | Pending |
-| BEAM-04 | Phase 4 | Pending |
-| BEAM-05 | Phase 4 | Pending |
+| BEAM-03 | Phase 4 | Complete |
+| BEAM-04 | Phase 4 | Complete |
+| BEAM-05 | Phase 4 | Complete |
 
 **Coverage:**
 - v1 requirements: 19 total

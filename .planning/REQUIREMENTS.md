@@ -36,8 +36,8 @@
 
 ### Beamer Slides
 
-- [ ] **BEAM-01**: LaTeX Beamer .tex file with problem frame(s) synthesized from research
-- [ ] **BEAM-02**: LaTeX Beamer research summary frame(s) (approach, key results, demand identification)
+- [x] **BEAM-01**: LaTeX Beamer .tex file with problem frame(s) synthesized from research
+- [x] **BEAM-02**: LaTeX Beamer research summary frame(s) (approach, key results, demand identification)
 - [ ] **BEAM-03**: LaTeX Beamer solution frame(s) with architecture diagram reference
 - [ ] **BEAM-04**: LaTeX Beamer demo frame(s) with run instructions
 - [ ] **BEAM-05**: LaTeX Beamer roadmap frame(s) — missing CFMM, missing vault/settlement, framed as next steps
@@ -77,8 +77,8 @@
 | RREAD-03 | Phase 3 | Complete |
 | DEMO-01 | Phase 3 | Complete |
 | DEMO-02 | Phase 3 | Complete |
-| BEAM-01 | Phase 4 | Pending |
-| BEAM-02 | Phase 4 | Pending |
+| BEAM-01 | Phase 4 | Complete |
+| BEAM-02 | Phase 4 | Complete |
 | BEAM-03 | Phase 4 | Pending |
 | BEAM-04 | Phase 4 | Pending |
 | BEAM-05 | Phase 4 | Pending |

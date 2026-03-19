@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 4 context gathered
-last_updated: "2026-03-18T23:47:21.020Z"
+stopped_at: Completed 04-01-PLAN.md (Beamer front half)
+last_updated: "2026-03-19T00:10:34.768Z"
 last_activity: 2026-03-18 -- Completed 03-01-PLAN.md (Root README)
 progress:
   total_phases: 4
   completed_phases: 3
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 7
+  completed_plans: 6
   percent: 80
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-18)
 
 **Core value:** First on-chain adverse competition oracle enabling LP hedging -- orthogonal to LVR
-**Current focus:** Phase 3: Repository Artifacts (in progress)
+**Current focus:** Phase 4: Beamer Slide Deck (in progress)
 
 ## Current Position
 
-Phase: 3 of 4 (Repository Artifacts)
+Phase: 4 of 4 (Beamer Slide Deck)
 Plan: 1 of 2 in current phase (complete)
-Status: Phase 3 in progress
-Last activity: 2026-03-18 -- Completed 03-01-PLAN.md (Root README)
+Status: Phase 4 in progress
+Last activity: 2026-03-19 -- Completed 04-01-PLAN.md (Beamer front half)
 
-Progress: [████████░░] 80%
+Progress: [█████████░] 86%
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Progress: [████████░░] 80%
 | Phase 02 P01 | 3min | 3 tasks | 4 files |
 | Phase 03 P01 | 3min | 1 tasks | 1 files |
 | Phase 03 P02 | 2min | 1 tasks | 1 files |
+| Phase 04 P01 | 2min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -72,6 +73,7 @@ Recent decisions affecting current work:
 - [Phase 02]: Used flowchart TB layout for context diagram; classDef styling for live/planned distinction
 - [Phase 03]: Preserved logo hero block; replaced operational README with landing-page style (Overview -> Architecture -> Demo -> Directory)
 - [Phase 03]: Included 5 notebooks (not 4) and all 7 model/*.tex files for completeness in research README
+- [Phase 04]: Copied macros into Beamer preamble for standalone compilation; two-column layout for inverted-U evidence frame
 
 ### Pending Todos
 
@@ -83,6 +85,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-18T23:47:21.018Z
-Stopped at: Phase 4 context gathered
-Resume file: .planning/phases/04-beamer-slide-deck/04-CONTEXT.md
+Last session: 2026-03-19T00:10:34.766Z
+Stopped at: Completed 04-01-PLAN.md (Beamer front half)
+Resume file: None

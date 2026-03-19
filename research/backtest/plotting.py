@@ -8,6 +8,41 @@ from matplotlib.figure import Figure
 from backtest.types import BacktestResult
 
 
+PUBLICATION_RCPARAMS: dict[str, object] = {
+    # LaTeX rendering — disabled: system lacks type1ec.sty; serif fallback
+    "text.usetex": False,
+    "font.family": "serif",
+    # Sizing for Beamer slides (128mm x 96mm content area)
+    "figure.figsize": (5.0, 3.5),
+    "figure.dpi": 300,
+    "savefig.dpi": 300,
+    "savefig.bbox": "tight",
+    "savefig.pad_inches": 0.05,
+    # Font sizes matching Beamer 11pt base
+    "font.size": 11,
+    "axes.labelsize": 12,
+    "axes.titlesize": 13,
+    "legend.fontsize": 10,
+    "xtick.labelsize": 10,
+    "ytick.labelsize": 10,
+    # Clean style
+    "axes.grid": False,
+    "axes.spines.top": False,
+    "axes.spines.right": False,
+}
+
+
+def set_publication_style() -> None:
+    """Configure matplotlib for Beamer-compatible publication plots.
+
+    Call at notebook top before any plotting. Uses serif fonts for
+    publication-quality typography. Enable ``text.usetex`` in
+    *PUBLICATION_RCPARAMS* when a full LaTeX installation (including
+    type1ec.sty / cm-super) is available.
+    """
+    plt.rcParams.update(PUBLICATION_RCPARAMS)
+
+
 def money_plot(results: list[BacktestResult]) -> Figure:
     """Two-subplot figure: top = P&L time series, bottom = delta_plus time series.
 

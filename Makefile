@@ -37,7 +37,7 @@ sol-test:
 	forge test --no-cache --match-path "test/fee-concentration-index-v2/**" -vv
 
 sol-test-demo:
-	forge test --no-cache --match-path "test/fee-concentration-index-v2/protocols/uniswapV4/*" -vvvv
+	forge test --no-cache --match-path "test/fee-concentration-index-v2/protocols/uniswapV4/*" -vv
 
 # ── Python ───────────────────────────────────────────────────────────
 test-py:

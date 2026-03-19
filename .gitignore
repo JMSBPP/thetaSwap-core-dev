@@ -111,5 +111,7 @@ tmp/
 *.log
 *.out
 *.toc
+*.nav
+*.snm
 !research/**/*.log
 out-sol/

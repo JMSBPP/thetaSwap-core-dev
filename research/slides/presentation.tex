@@ -451,26 +451,36 @@ Reference implementation: \texttt{protocols/uniswap-v4/NativeUniswapV4Facet.sol}
 \end{frame}
 
 % ── Frame: Demo — Live Demo ──────────────────────────────────────────────────
-\begin{frame}{Live Demo}
+\begin{frame}[fragile]{Live Demo}
 
-\begin{block}{Run the integration test}
-\small
-\texttt{forge test --match-path} \\
-\texttt{"test/fee-concentration-index-v2/protocols/uniswapV4/} \\
-\texttt{NativeV4FeeConcentrationIndex.integration.t.sol" -vv}
+\begin{block}{See it by yourself}
+\ttfamily\small
+make test-demo
 \end{block}
 
-\bigskip
+\medskip
+
+This is a \textbf{differential test}: scenarios are generated in Python, expected
+metric values are computed off-chain, then contrasted against the implied pool
+state on a Sepolia fork via \texttt{forge test}.
+
+\medskip
 
 \textbf{What to observe:}
-
-\begin{enumerate}
+\begin{enumerate}\small
   \item Swap updates $\AT$ --- fee concentration index tracks each trade
   \item Mint increments $\PosCount$ --- new positions enter the pool
   \item Burn triggers $\DeltaPlus$ derivation --- exit computes concentration
     deviation
   \item All metrics computed on-chain in a single V4 hook callback
 \end{enumerate}
+
+\medskip
+
+{\footnotesize
+\textbf{Note:} NativeV4 coverage runs on Sepolia fork. 2 tests currently fail
+due to fixed-point precision cosmetics (rounding in $x_k^2$ accumulation) ---
+to be resolved.}
 
 \end{frame}
 

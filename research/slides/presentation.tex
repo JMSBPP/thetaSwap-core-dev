@@ -247,17 +247,72 @@ What is the price?
     hourly pool fee revenue} for protection --- derived from the exit
     hazard marginal effect at 15\% fee dispersion above equilibrium. \\
 
-Does hedging improve outcomes?
-  & Historical replay with a power-squared payoff and \$200K seed capital:
-    \textbf{18.8\%} of positions are better off hedged, with a mean hedge
-    value of \textbf{+\$23.21}. \\
 \bottomrule
 \end{tabular}
 \end{center}
 
+\end{frame}
+
+% ── Frame: Backtest — Does Hedging Improve Outcomes? ─────────────────────────
+\begin{frame}{Does Hedging Improve Outcomes?}
+
+Historical replay of 600 real positions through a power-squared exit payoff
+($\alpha = 2$) with \$200K underwriter seed capital:
+
+\bigskip
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Metric & Result \\
+\midrule
+Positions better off hedged & \textbf{18.8\%} \\
+Mean hedge value & \textbf{+\$23.21} per position \\
+Payout / Premium ratio & 121.1\% (payouts exceed premiums) \\
+Optimal tail exponent & $\alpha = 2$ (dominates $\alpha = 1, 1.5, 3$) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\bigskip
+
+The power-squared payoff rewards LPs who \emph{stay in the pool} during
+concentration spikes --- no moral hazard.
+
+\end{frame}
+
+% ── Frame: Backtest — Reserve Dynamics ───────────────────────────────────────
+\begin{frame}{Backtest: Reserve Dynamics}
+
+\begin{columns}[T]
+
+\begin{column}{0.50\textwidth}
+Reserve trajectories at different seed capital levels show the
+\textbf{bootstrapping problem} and its resolution:
+
+\begin{itemize}
+  \item Without seed capital ($R_0 = 0$): 0\% of positions better off ---
+    reserve too small at trigger time
+  \item With underwriter seed ($R_0 = \$200$K): reserve absorbs the
+    concentration spike and delivers positive hedge value
+  \item This validates the \textbf{hybrid architecture}: the CFMM market
+    layer provides initial liquidity
+\end{itemize}
+
 \medskip
-{\footnotesize Full econometric treatment, backtest methodology, and payoff
-comparison in \texttt{research/model/main.pdf}.}
+
+{\footnotesize Full backtest methodology and payoff comparison:
+\texttt{notebooks/eth-usdc-backtest.ipynb} and \texttt{model/main.pdf} \S3.}
+\end{column}
+
+\begin{column}{0.45\textwidth}
+\begin{center}
+\includegraphics[width=\textwidth]{../figures/reserve-dynamics.png}
+\end{center}
+\end{column}
+
+\end{columns}
 
 \end{frame}
 

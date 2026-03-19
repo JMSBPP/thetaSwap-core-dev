@@ -388,7 +388,7 @@ Query: $\DeltaPlus = \max(0, \sqrt{\AT^2} - \ATnull)$ via \texttt{getDeltaPlus()
 \begin{itemize}\small
   \item \textbf{FCI Algorithm} warehouses the logic; facets adapt protocol data
     via \texttt{delegatecall}
-  \item Facet maps: \texttt{protocolRpc} $\to$ \texttt{poolId/PoolKey},
+  \item Facet maps: \texttt{poolRpc} $\to$ \texttt{poolId/PoolKey},
     \texttt{protocolEventData} $\to$ \texttt{hookCalldata}
   \item Reactive Network connects pools \textbf{on demand} --- not limited to
     V4-native {\footnotesize (ref: \texttt{protocols/uniswap-v3/})}

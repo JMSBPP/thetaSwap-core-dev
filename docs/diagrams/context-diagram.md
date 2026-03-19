@@ -18,7 +18,7 @@ flowchart LR
     FACET["Protocol Facet<br/><i>IFCIProtocolFacet</i>"]
 
     %% ── Facet responsibilities ──
-    ADAPT["protocolRpc → poolId / PoolKey<br/>protocolEventData → hookCalldata<br/>protocol storage slot"]
+    ADAPT["poolRpc → poolId / PoolKey<br/>protocolEventData → hookCalldata<br/>protocol storage slot"]
 
     %% ── Flow ──
     PM -- "hook call" --> CB

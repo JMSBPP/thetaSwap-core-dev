@@ -1,0 +1,11 @@
+RangeAccrualNote::safeTransferFrom
+├── given valid transfer (from has balance, to is valid)
+│   ├── it decreases sender balance by amount.
+│   ├── it increases receiver balance by amount.
+│   └── it does not change totalLiquidity for the tokenId.
+├── given transfer to self
+│   └── it succeeds with no net balance change.
+├── given transfer amount exceeds balance
+│   └── it reverts.
+└── given transfer preserves total value
+    └── sum of all holders' claimable ratios is unchanged after transfer.

@@ -1,0 +1,15 @@
+RangeAccrualNote::claim
+├── given holder has balance for tokenId
+│   ├── when growthInside and globalGrowth have both increased (price was in range)
+│   │   ├── it returns the n/N ratio: (growthInside_delta / globalGrowth_delta).
+│   │   └── it updates the holder's last claimed growth values.
+│   ├── when globalGrowth increased but growthInside unchanged (price out of range)
+│   │   └── it returns ratio of zero.
+│   ├── when neither has changed (no blocks passed)
+│   │   └── it returns zero.
+│   └── when called twice consecutively without growth change
+│       └── second call returns zero (idempotency).
+├── given holder has zero balance for tokenId
+│   └── it reverts.
+└── given uninitialized tokenId (never minted)
+    └── it reverts.

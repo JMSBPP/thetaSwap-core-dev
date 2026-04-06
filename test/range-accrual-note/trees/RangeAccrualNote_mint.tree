@@ -1,0 +1,18 @@
+RangeAccrualNote::mint
+├── given valid NoteId and liquidity amount
+│   ├── when tokenId is new (first mint for this NoteId)
+│   │   ├── it snapshots entryGrowthInside from the accumulator source.
+│   │   ├── it snapshots entryGlobalGrowth from the accumulator source.
+│   │   ├── it sets totalLiquidity to the minted amount.
+│   │   ├── it mints ERC-1155 tokens to the recipient.
+│   │   └── it validates the NoteId (tickLower < tickUpper, notionalRatio > 0).
+│   └── when tokenId already exists (subsequent mint, same epoch+range)
+│       ├── it does NOT re-snapshot (preserves original entry values).
+│       ├── it increments totalLiquidity additively.
+│       └── it mints additional ERC-1155 tokens to the recipient.
+├── given NoteId with tickLower >= tickUpper
+│   └── it reverts with InvalidRange.
+├── given NoteId with notionalRatio == 0
+│   └── it reverts with InvalidNotionalRatio.
+└── given zero liquidity amount
+    └── it reverts.

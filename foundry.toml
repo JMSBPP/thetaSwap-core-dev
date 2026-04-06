@@ -36,7 +36,10 @@ remappings = [
     "@utils/=src/utils/",
     "@foundry-script/=foundry-script/",
     "@cryptoalgebra/integral-base-plugin/=lib/integral-team-plugins/src/plugin/stub/",
-    "@cryptoalgebra/integral-core/=lib/Algebra/src/core/"
+    "@cryptoalgebra/integral-core/=lib/Algebra/src/core/",
+    # Compose (Perfect-Abstractions) diamond token primitives
+    "@compose/=lib/Compose/src/",
+    "@range-accrual-note/=src/range-accrual-note/"
 ]
 
 script = "foundry-script"

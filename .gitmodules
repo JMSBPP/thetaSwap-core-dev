@@ -33,3 +33,6 @@
 [submodule "lib/Algebra"]
 	path = lib/Algebra
 	url = https://github.com/cryptoalgebra/Algebra
+[submodule "lib/Compose"]
+	path = lib/Compose
+	url = https://github.com/Perfect-Abstractions/Compose

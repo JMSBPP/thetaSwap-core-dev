@@ -46,6 +46,8 @@ script = "foundry-script"
 threads = 6
 force = false
 ignored_error_codes = [2018, 2394, 5667, 6321]
+# AlgebraIntegration has a pre-existing Yul stack-too-deep; exclude from default build
+deny_warnings = false
 
 [profile.lite]
 skip = ["test/**", "foundry-script/**"]

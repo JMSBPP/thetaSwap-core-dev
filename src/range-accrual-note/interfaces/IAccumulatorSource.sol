@@ -6,10 +6,12 @@ import {TickRange} from "typed-uniswap-v4/types/TickRangeMod.sol";
 
 /// @title IAccumulatorSource
 /// @notice Protocol-agnostic interface for reading fee/reward growth accumulators.
-/// @dev Return values use LeftRight packing convention:
-///   left 128 bits (int128) = token0 growth per unit liquidity
-///   right 128 bits (int128) = token1 growth per unit liquidity
-/// For single-token accumulators (e.g., Angstrom bid_in_asset0), right slot is zero.
+/// @dev Returns uint256 matching the native accumulator type used by Uniswap V3/V4
+/// and Angstrom's GrowthOutsideUpdater. Accumulators are monotonically increasing
+/// unsigned values that use unchecked wrapping arithmetic for deltas.
+///
+/// For protocols with two-token fee growth (V3/V4), adapters should return token0
+/// growth only. Token1 growth can be exposed via a separate adapter or extension.
 ///
 /// Implementations MUST handle all three tick-position cases internally:
 ///   current_tick < tickLower:  growthOutside[lower] - growthOutside[upper]
@@ -18,12 +20,12 @@ import {TickRange} from "typed-uniswap-v4/types/TickRangeMod.sol";
 ///
 /// TickRange must use packed encoding (fromTicksPacked) so ticks are recoverable.
 interface IAccumulatorSource {
-    /// @notice Accumulated growth inside a tick range, LeftRight-packed.
+    /// @notice Accumulated growth inside a tick range.
     function growthInside(PoolId poolId, TickRange range)
-        external view returns (int256);
+        external view returns (uint256);
 
-    /// @notice Global cumulative growth, LeftRight-packed.
-    function globalGrowth(PoolId poolId) external view returns (int256);
+    /// @notice Global cumulative growth.
+    function globalGrowth(PoolId poolId) external view returns (uint256);
 
     /// @notice Epoch number for a given block number.
     /// @dev Uses uint64 to match Angstrom's block number convention.

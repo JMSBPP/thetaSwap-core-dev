@@ -5,11 +5,13 @@ import "forge-std/Test.sol";
 import {PoolId} from "v4-core/src/types/PoolId.sol";
 import {TickRange, fromTicksPacked} from "typed-uniswap-v4/types/TickRangeMod.sol";
 import {IAccumulatorSource} from "@range-accrual-note/interfaces/IAccumulatorSource.sol";
+import {AngstromAccumulatorSource} from "@range-accrual-note/adapters/AngstromAccumulatorSource.sol";
 
 /// @dev BTT spec: test/range-accrual-note/trees/AngstromAccumulatorSource_growthInside.tree
 
 /// @dev Mock that implements extsload(uint256) backed by a mapping.
 ///      The adapter will staticcall this to read "Angstrom storage".
+///      For integration tests with the full Angstrom stack, see Task 6 (fork tests).
 contract MockExtsload {
     mapping(uint256 => uint256) public slots;
 
@@ -25,11 +27,14 @@ contract MockExtsload {
 /// @dev Mock PoolManager that implements extsload for slot0 (current tick).
 ///      Slot0 layout: sqrtPriceX96 (160 bits) | tick (24 bits) | protocolFee (24 bits) | lpFee (24 bits) | ...
 ///      tick is at bits 160-183.
+
+// NOTE: Use the SAME UNIV4 HELPER that ARNSTRON USES
 contract MockPoolManager {
     mapping(uint256 => uint256) public slots;
 
-    function extsload(uint256 slot) external view returns (uint256) {
-        return slots[slot];
+    /// @dev V4 PoolManager uses extsload(bytes32), selector 0x1e2eaeaf
+    function extsload(bytes32 slot) external view returns (bytes32) {
+        return bytes32(slots[uint256(slot)]);
     }
 
     /// @dev Pack a tick into slot0 format at bits 160-183
@@ -46,16 +51,17 @@ contract MockPoolManager {
     }
 }
 
-contract AngstromAccumulatorSourceTest is Test {
-    // Will be replaced by real adapter once Task 5 is implemented
-    // For now these tests define the expected behavior
 
+
+contract AngstromAccumulatorSourceTest is Test {
     MockExtsload angstromMock;
     MockPoolManager poolManagerMock;
+    AngstromAccumulatorSource adapter;
 
     // Angstrom storage layout constants (from Exercise B, verified on mainnet)
     uint256 constant POOL_REWARDS_SLOT = 7;
     uint256 constant REWARD_GROWTH_SIZE = 16777216; // 2^24
+    uint64 constant EPOCH_LENGTH_BLOCKS = 7200;
 
     // Test pool
     PoolId constant POOL_ID = PoolId.wrap(0xe500210c7ea6bfd9f69dce044b09ef384ec2b34832f132baec3b418208e3a657);
@@ -74,6 +80,11 @@ contract AngstromAccumulatorSourceTest is Test {
     function setUp() public {
         angstromMock = new MockExtsload();
         poolManagerMock = new MockPoolManager();
+        adapter = new AngstromAccumulatorSource(
+            address(angstromMock),
+            address(poolManagerMock),
+            EPOCH_LENGTH_BLOCKS
+        );
 
         range = fromTicksPacked(TICK_LOWER, TICK_UPPER);
 
@@ -130,15 +141,8 @@ contract AngstromAccumulatorSourceTest is Test {
         _setOutsideAbove(TICK_UPPER, 3000);
         _setCurrentTick(0); // in range [-100, 100)
 
-        uint256 expected = 10000 - 2000 - 3000; // 5000
-        assertEq(expected, 5000);
-
-        // This assertion will be against the adapter once implemented (Task 5)
-        // For now we verify the expected computation
-        assertEq(
-            _expectedGrowthInside(0, 10000, 2000, 3000),
-            5000
-        );
+        uint256 result = adapter.growthInside(POOL_ID, range);
+        assertEq(result, 5000); // 10000 - 2000 - 3000
     }
 
     // ── given current tick is below tickLower ──
@@ -149,11 +153,8 @@ contract AngstromAccumulatorSourceTest is Test {
         _setOutsideAbove(TICK_UPPER, 1000);
         _setCurrentTick(-200); // below range
 
-        uint256 expected = 7000 - 1000; // 6000
-        assertEq(
-            _expectedGrowthInside(-200, 10000, 7000, 1000),
-            6000
-        );
+        uint256 result = adapter.growthInside(POOL_ID, range);
+        assertEq(result, 6000); // 7000 - 1000
     }
 
     // ── given current tick is at or above tickUpper ──
@@ -164,18 +165,16 @@ contract AngstromAccumulatorSourceTest is Test {
         _setOutsideAbove(TICK_UPPER, 8000);
         _setCurrentTick(200); // above range
 
-        uint256 expected = 8000 - 1000; // 7000
-        assertEq(
-            _expectedGrowthInside(200, 10000, 1000, 8000),
-            7000
-        );
+        uint256 result = adapter.growthInside(POOL_ID, range);
+        assertEq(result, 7000); // 8000 - 1000
     }
 
     // ── given all growth values are zero ──
 
     function test_growthInside_givenAllZero_returnsZero() public view {
-        // Default: all slots are zero
-        assertEq(_expectedGrowthInside(0, 0, 0, 0), 0);
+        // Default: all mock slots are zero, tick is zero (in range)
+        uint256 result = adapter.growthInside(POOL_ID, range);
+        assertEq(result, 0);
     }
 
     // ── conservation property ──
@@ -190,7 +189,7 @@ contract AngstromAccumulatorSourceTest is Test {
         _setOutsideAbove(TICK_UPPER, outsideAbove);
         _setCurrentTick(0);
 
-        uint256 inside = _expectedGrowthInside(0, global, outsideBelow, outsideAbove);
+        uint256 inside = adapter.growthInside(POOL_ID, range);
 
         // Conservation: inside + outsideBelow + outsideAbove == globalGrowth
         assertEq(inside + outsideBelow + outsideAbove, global);
@@ -220,12 +219,12 @@ contract AngstromAccumulatorSourceTest is Test {
 
     function test_globalGrowth_givenRewardsAccumulated_returnsValue() public {
         _setGlobalGrowth(42_000_000);
-        uint256 value = angstromMock.slots(structBase + REWARD_GROWTH_SIZE);
+        uint256 value = adapter.globalGrowth(POOL_ID);
         assertEq(value, 42_000_000);
     }
 
     function test_globalGrowth_givenNoRewards_returnsZero() public view {
-        uint256 value = angstromMock.slots(structBase + REWARD_GROWTH_SIZE);
+        uint256 value = adapter.globalGrowth(POOL_ID);
         assertEq(value, 0);
     }
 
@@ -233,34 +232,26 @@ contract AngstromAccumulatorSourceTest is Test {
     // epochOf tests
     // ══════════════════════════════════════════════
 
-    function test_epochOf_returnsBlockDividedByLength() public pure {
-        // epochLength = 7200 blocks (~1 day at 12s/block)
-        uint64 epochLength = 7200;
-        uint64 blockNumber = 14400;
-        uint40 expected = uint40(blockNumber / epochLength); // 2
-        assertEq(expected, 2);
+    function test_epochOf_returnsBlockDividedByLength() public view {
+        assertEq(adapter.epochOf(14400), 2); // 14400 / 7200 = 2
     }
 
-    function test_epochOf_givenBlockZero_returnsZero() public pure {
-        uint64 epochLength = 7200;
-        uint40 expected = uint40(uint64(0) / epochLength);
-        assertEq(expected, 0);
+    function test_epochOf_givenBlockZero_returnsZero() public view {
+        assertEq(adapter.epochOf(0), 0);
     }
 
-    function test_epochOf_boundaryBlock() public pure {
-        uint64 epochLength = 7200;
+    function test_epochOf_boundaryBlock() public view {
         // Block 7199 = epoch 0, block 7200 = epoch 1
-        assertEq(uint40(uint64(7199) / epochLength), 0);
-        assertEq(uint40(uint64(7200) / epochLength), 1);
+        assertEq(adapter.epochOf(7199), 0);
+        assertEq(adapter.epochOf(7200), 1);
     }
 
     // ══════════════════════════════════════════════
     // epochLength test
     // ══════════════════════════════════════════════
 
-    function test_epochLength_returnsConfigured() public pure {
-        uint64 epochLength = 7200;
-        assertEq(epochLength, 7200);
+    function test_epochLength_returnsConfigured() public view {
+        assertEq(adapter.epochLength(), EPOCH_LENGTH_BLOCKS);
     }
 
     // ══════════════════════════════════════════════

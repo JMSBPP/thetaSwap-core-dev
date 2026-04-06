@@ -162,6 +162,18 @@ premiumBase = collected * totalLiquidity / netLiquidity²
 premiumOwed = premiumBase * (net + removed/VEGOID) / total
 ```
 
+**Variable mapping to RAN context:**
+
+| SFPM Variable | RAN Meaning | Source |
+|---------------|-------------|--------|
+| `collected` | `growthInside_delta * positionLiquidity` — realized fee/reward income for this position since last touch | `IAccumulatorSource.growthInside()` delta |
+| `totalLiquidity` | Sum of all liquidity units minted for this tokenId (all holders) | `RangeAccrualNote` storage |
+| `netLiquidity` | `totalLiquidity - removedLiquidity` — liquidity currently active (not burned/exited) | `RangeAccrualNote` storage |
+| `removed` | Liquidity units that have been burned but whose premium hasn't fully settled | `RangeAccrualNote` storage |
+| `net` | Same as `netLiquidity` | Alias |
+| `total` | Same as `totalLiquidity` | Alias |
+| `VEGOID` | Spread parameter controlling premium compression between long/short sides. Higher VEGOID = tighter spread. Governance-settable. | Configuration parameter |
+
 Where VEGOID_equivalent controls the spread between what short sellers earn and long holders pay.
 
 ---
@@ -204,24 +216,43 @@ The standard interface that abstracts accumulator reads across protocols:
 
 ```
 interface IAccumulatorSource {
-    /// @notice Returns the accumulated growth inside a tick range
-    /// @dev Equivalent to Angstrom's growthInside or V3's feeGrowthInside
+    /// @notice Returns the accumulated growth inside a tick range, packed as LeftRight
+    /// @dev Returns int256 packed via LeftRight.sol: left half = token0 growth, right half = token1 growth
+    /// For single-token accumulators (e.g., Angstrom bid_in_asset0), token1 slot is zero.
+    /// Handles all three tick-position cases internally:
+    ///   - current_tick < tickLower:  outsideBelow[lower] - outsideAbove[upper]
+    ///   - current_tick in [lower, upper): globalGrowth - outsideBelow[lower] - outsideAbove[upper]
+    ///   - current_tick >= upper: outsideAbove[upper] - outsideBelow[lower]
     function growthInside(
         bytes32 poolId,
         int24 tickLower,
         int24 tickUpper
-    ) external view returns (uint256);
+    ) external view returns (int256);
 
-    /// @notice Returns the global cumulative growth
-    function globalGrowth(bytes32 poolId) external view returns (uint256);
+    /// @notice Returns the global cumulative growth, packed as LeftRight
+    function globalGrowth(bytes32 poolId) external view returns (int256);
 
-    /// @notice Returns the current epoch number for a given block
-    function epochOf(uint256 blockNumber) external view returns (uint40);
+    /// @notice Returns the current epoch number for a given timestamp
+    /// @dev Uses timestamp (not block number) to match FCI V2 epoch storage convention
+    function epochOf(uint256 timestamp) external view returns (uint40);
 
-    /// @notice Returns the epoch length in blocks
+    /// @notice Returns the epoch length in seconds
     function epochLength() external view returns (uint256);
 }
 ```
+
+### Fee Growth Scalar Convention
+
+The `growthInside` and `globalGrowth` return values use Panoptic's `LeftRight.sol` packing:
+- **Left 128 bits** (`int128`): token0 fee/reward growth per unit liquidity
+- **Right 128 bits** (`int128`): token1 fee/reward growth per unit liquidity
+
+This handles protocol differences:
+- **Angstrom**: `bid_in_asset0` maps to token0 (left); token1 is zero
+- **V3/V4**: Both `feeGrowthInside0X128` and `feeGrowthInside1X128` are packed
+- **Algebra**: Combined via `FeeRevenuePerLiquidityX96Lib` price-weighted merge into left; right is zero
+
+Adapters MUST implement the three-branch tick logic (below/in/above range) internally. The caller receives the correct growthInside regardless of current tick position.
 
 ### Adapter Implementations
 
@@ -230,7 +261,7 @@ interface IAccumulatorSource {
 | **AngstromAccumulator** | `GrowthOutsideUpdater` storage (slot 7, verified by Exercise B) | `fee=0` in V4 events. MUST read from hook storage, not V4 PoolManager fee accumulators. Bundle rewards are separate. |
 | **UniswapV3Accumulator** | `feeGrowthInside0LastX128` / `feeGrowthInside1LastX128` | Standard V3 fee growth. Reuse Panoptic's `FeesCalc.sol` pattern. |
 | **UniswapV4Accumulator** | `StateLibrary.getFeeGrowthInside()` | V4 native fee growth. Reuse existing `NativeUniswapV4Facet.sol` read pattern. |
-| **AlgebraAccumulator** | Algebra timepoint accumulator via `TimePointExtLib.sol` | Already have `src/AlgebraIntegration/` with hook + libraries. |
+| **AlgebraAccumulator** | Algebra timepoint accumulator via `TimePointExtLib.sol` | `src/AlgebraIntegration/` has hook + global fee revenue libs, but `TimePointExtLib.sol` is a stub. Range-scoped growthInside requires new implementation. **Deferred to post-V1.** |
 
 ### Angstrom Storage Layout (from Exercise B, verified on mainnet)
 
@@ -239,8 +270,14 @@ struct_base = keccak256(abi.encode(poolId, 7))    // slot 7 = poolRewards mappin
 rewardGrowthOutside[tick] = struct_base + uint24(tick)
 globalGrowth = struct_base + 16777216             // 2^24 offset
 
-growthInside = globalGrowth - rewardGrowthOutside[lower] - rewardGrowthOutside[upper]
-// (when current_tick in [lower, upper))
+// Three-branch growthInside computation (all adapters must implement):
+// Case 1: current_tick < tickLower
+//   growthInside = rewardGrowthOutside[lower] - rewardGrowthOutside[upper]
+// Case 2: current_tick in [tickLower, tickUpper)
+//   growthInside = globalGrowth - rewardGrowthOutside[lower] - rewardGrowthOutside[upper]
+// Case 3: current_tick >= tickUpper
+//   growthInside = rewardGrowthOutside[upper] - rewardGrowthOutside[lower]
+// Reference: NativeUniswapV4Facet.poolRangeFeeGrowthInside() for the canonical 3-branch pattern
 ```
 
 4 RPC reads per observation: 3 Angstrom storage slots + 1 V4 PoolManager slot0 (current tick).
@@ -302,7 +339,7 @@ When `collateral_ratio < liquidation_threshold`:
 | `src/fee-concentration-index-v2/types/EpochSnapshot.sol` | Epoch snapshot infrastructure |
 | `src/protocol-adapter/` | Base protocol adapter pattern |
 | `src/AlgebraIntegration/` | Algebra accumulator reading |
-| `src/fci-token-vault/modules/CollateralCustodianMod.sol` | Collateral management storage pattern |
+| `src/fci-token-vault/modules/CollateralCustodianMod.sol` | Diamond storage slot convention reference only (existing module is simple paired LONG/SHORT mint-burn; CollateralManager requires new implementation with asymmetric collateral, per-tokenId tracking, and liquidation) |
 | `src/fci-token-vault/tokens/ERC20WrapperFacade.sol` | Token wrapping pattern for composability |
 
 ---
@@ -382,8 +419,14 @@ Exercise B artifacts already built and reusable:
 ### Formal Invariants (kontrol verification targets)
 
 ```
-// 1. Conservation: no theta created from nothing
-∀ tokenId: total_claimed(tokenId) <= growthInside_delta(tokenId) * totalLiquidity(tokenId)
+// 1a. Conservation (short side): shorts receive at most what the pool accrued
+∀ tokenId: total_distributed_to_shorts(tokenId) <= growthInside_delta(tokenId) * totalLiquidity(tokenId)
+
+// 1b. Conservation (long side): longs pay at least what shorts receive (spread is non-negative)
+∀ tokenId: total_paid_by_longs(tokenId) >= total_distributed_to_shorts(tokenId)
+
+// 1c. Spread capture: difference is protocol revenue
+∀ tokenId: total_paid_by_longs(tokenId) - total_distributed_to_shorts(tokenId) == protocol_revenue(tokenId)
 
 // 2. Solvency: collateral covers all outstanding claims
 ∀ t: Σ collateral(t) >= Σ premiumOwed(t)
@@ -397,6 +440,9 @@ Exercise B artifacts already built and reusable:
 // 5. Transfer neutrality: transfer doesn't change total accrued value
 ∀ transfer(from, to, id, amt):
   premiumOwed(from) + premiumOwed(to) == premiumOwed_before(from) + premiumOwed_before(to)
+
+// 6. ERC-1155 supply conservation
+∀ tokenId: totalSupply(tokenId) == Σ balanceOf(holder, tokenId) for all holders
 ```
 
 ---
@@ -419,7 +465,7 @@ kontrol  ✓    gambit   ✗    hevm  ✗
 | `CollateralManager` | BTT tree per collateral operation | Panoptic CT pattern adaptation | Formal proof: solvency invariant holds under all paths |
 | Differential tests | N/A (fork tests) | Fork test + FFI to Python models | N/A |
 
-### Key Algebraic Properties (from `references/algebraic-primitives.md`)
+### Key Algebraic Properties (from EVM TDD skill `evm-tdd:references:algebraic-primitives`)
 
 - **Conservation**: `growthInside + growthOutside = globalGrowth` always
 - **Monotonicity**: `growthInside` non-decreasing while tick in range
@@ -430,24 +476,40 @@ kontrol  ✓    gambit   ✗    hevm  ✗
 
 ## 11. Scope and Non-Goals
 
-### In Scope (V1)
+### In Scope — V1a (Core Primitive)
 
-- `IAccumulatorSource` interface + Angstrom adapter (primary) + V3 adapter
+- `IAccumulatorSource` interface
+- `AngstromAccumulator` adapter (primary — uses Angstrom's native `GrowthOutsideUpdater` accumulation as-is)
 - `RangeAccrualNote` ERC-1155 token with epoch-batched fungibility
-- Premium tracking via SFPM accumulator pattern
-- CollateralManager with Panoptic CT pattern
+- Basic `claim()` without premium spread (direct accumulator delta payout)
 - Fork tests against mainnet Angstrom data
-- Differential tests against paper equations
+- Differential tests against paper equations (Panoptic convergence, Bichuch-Feinstein)
+
+### In Scope — V1b (Counterparty Risk Layer)
+
+- Premium tracking via SFPM accumulator pattern (adds VEGOID spread)
+- CollateralManager with Panoptic CT pattern (new implementation, not adaptation)
+- `UniswapV3Accumulator` adapter
+- Liquidation / force-exercise
 - VEGOID_equivalent as governance-settable constant
 
 ### Out of Scope (Future Extensions)
 
+- `AlgebraAccumulator` adapter (stub state — requires new range-scoped implementation)
+- `UniswapV4Accumulator` adapter (straightforward but deferred to reduce V1 scope)
 - Vault wrapping (Approach B from brainstorming)
 - Derivative overlay / theta swap engine (Approach C)
 - Adaptive VEGOID based on Exercise B regression results
 - ACCRUAL_DECRUAL, TARN, BARRIERS, CALLABLE, BASKET, FLOATING_COUPON extension flags
 - Cross-chain deployment
 - Exercise B econometric estimation (blocked on API credits)
+
+### Accumulation Standard
+
+The `AngstromAccumulator` uses Angstrom's native `GrowthOutsideUpdater` accumulation directly — it does not reimplement or modify the accumulation logic. The adapter is a **read-only view** over Angstrom's existing storage. Whatever Angstrom accumulates (auction bid surplus distributed pro-rata to in-range LPs), that is what the RAN tokenizes. This ensures:
+- No divergence between Angstrom's reward distribution and the RAN's value
+- No maintenance burden from tracking Angstrom protocol upgrades in custom accumulation code
+- The RAN's value is exactly verifiable against Angstrom's on-chain state
 
 ---
 

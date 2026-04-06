@@ -182,8 +182,15 @@ function validate(NoteId self) pure {
 // ── Global using ──
 
 using {
-    poolIndex, vegoid, epochLen,
-    extensionFlag, notionalRatio, isLong, tokenType,
-    tickLower, tickUpper, epochId,
+    addPoolIndex, poolIndex,
+    addVegoid, vegoid,
+    addEpochLength, epochLen,
+    addExtensionFlag, extensionFlag,
+    addNotionalRatio, notionalRatio,
+    addIsLong, isLong,
+    addTokenType, tokenType,
+    addTickLower, tickLower,
+    addTickUpper, tickUpper,
+    addEpochId, epochId,
     validate
 } for NoteId global;

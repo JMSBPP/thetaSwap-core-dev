@@ -1,0 +1,21 @@
+NoteId
+├── given a freshly constructed NoteId
+│   ├── when all fields are set via add* builders
+│   │   ├── it roundtrips poolIndex through getter.
+│   │   ├── it roundtrips vegoid through getter.
+│   │   ├── it roundtrips epochLength through getter.
+│   │   ├── it roundtrips extensionFlag through getter.
+│   │   ├── it roundtrips notionalRatio through getter.
+│   │   ├── it roundtrips isLong through getter.
+│   │   ├── it roundtrips tokenType through getter.
+│   │   ├── it roundtrips tickLower through getter.
+│   │   ├── it roundtrips tickUpper through getter.
+│   │   └── it roundtrips epochId through getter.
+│   └── when fields are set independently
+│       └── it does not corrupt adjacent fields.
+├── given tickLower >= tickUpper
+│   └── it reverts on validate with InvalidRange.
+├── given notionalRatio is zero
+│   └── it reverts on validate with InvalidNotionalRatio.
+└── given valid parameters
+    └── it passes validate without reverting.

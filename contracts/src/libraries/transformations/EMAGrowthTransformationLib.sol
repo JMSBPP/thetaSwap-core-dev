@@ -14,6 +14,7 @@ import {growthToTick} from "core/src/libraries/GrowthToTickLib.sol";
 // ── Errors ──
 
 error InsufficientObservations();
+error FuturePack(uint24 packEpoch, uint24 currentEpoch);
 
 // ── Free functions ──
 
@@ -44,6 +45,14 @@ function updateGrowthEMA(
     // ── Step 1: Epoch check (same-epoch fast path) ──
     uint24 currentEpoch = uint24((block.timestamp >> 6) & 0xFFFFFF);
     if (currentEpoch == currentOraclePack.epoch()) return currentOraclePack;
+
+    // ── Step 1b: Future-pack guard (F-01) ──
+    // Reject packs whose epoch is ahead of the current epoch. Without this, the
+    // unchecked uint24 subtraction in Step 6 wraps to ~2^24 epochs (~34 years of
+    // timeDelta), producing a catastrophic single-update EMA shift with no revert.
+    if (currentOraclePack.epoch() > currentEpoch) {
+        revert FuturePack(currentOraclePack.epoch(), currentEpoch);
+    }
 
     // ── Step 2: Buffer precondition ──
     uint256 count = observationCount(buffer);

@@ -95,9 +95,21 @@ no_match_path = "lib/*"
 verbosity = 2
 
 [profile.diff.fuzz]
-runs = 5
+runs = 5  # constrained by Alchemy free-tier rate limit — use FOUNDRY_PROFILE=diff-deep for thorough fuzz
 
 [profile.diff.invariant]
+runs = 0
+
+[profile.diff-deep]
+ffi = true
+match_path = "test/**/*.diff.t.sol"
+no_match_path = "lib/*"
+verbosity = 2
+
+[profile.diff-deep.fuzz]
+runs = 100
+
+[profile.diff-deep.invariant]
 runs = 0
 
 [rpc_endpoints]

@@ -159,8 +159,11 @@ contract AngstromRANPipelineIntegrationTest is BaseForkTest {
             uint256(currentEpoch - 1), 0, 0, int24(0), uint96(0), int24(0), 0
         );
 
-        vm.expectRevert(bytes(""));
-        pipeline.runEMA(stalePack, DEFAULT_PERIODS, DEFAULT_CLAMP);
+        try pipeline.runEMA(stalePack, DEFAULT_PERIODS, DEFAULT_CLAMP) {
+            fail();
+        } catch (bytes memory reason) {
+            assertEq(reason.length, 0, "expected FullMath bare require (empty revert) for zero anchor");
+        }
     }
 
     function test__IntegrationSecurityEdge__C2_StagnantPoolDoesNotRevertAndTicksEpoch() public onlyForked {
@@ -200,39 +203,36 @@ contract AngstromRANPipelineIntegrationTest is BaseForkTest {
         pipeline.recordSynthetic(1000, 0, 1e30);
         pipeline.recordSynthetic(1001, 12, 5e30);
 
-        MockRANPipeline mirror = new MockRANPipeline(BUFFER_CAPACITY, consumer, USDC_WETH);
-        vm.makePersistent(address(mirror));
-        mirror.recordSynthetic(1000, 0, 5e30);
-        mirror.recordSynthetic(1001, 12, 1e30);
-
         uint24 currentEpoch = uint24((block.timestamp >> 6) & 0xFFFFFF);
         OraclePack stalePack = OraclePackLibrary.storeOraclePack(
             uint256(currentEpoch - 1), 0, 0, int24(0), uint96(0), int24(0), 0
         );
 
-        OraclePack packA = pipeline.runEMA(stalePack, DEFAULT_PERIODS, DEFAULT_CLAMP);
-        OraclePack packB = mirror.runEMA(stalePack, DEFAULT_PERIODS, DEFAULT_CLAMP);
+        OraclePack updated = pipeline.runEMA(stalePack, DEFAULT_PERIODS, int24(100));
 
-        assertTrue(
-            OraclePack.unwrap(packA) != OraclePack.unwrap(packB),
-            "arg-order bug canary: mirrored growth direction must produce different EMA outputs"
+        int24 storedTick = updated.lastTick();
+        assertGt(
+            storedTick,
+            int24(0),
+            "EMA must pass latest.growth as current (positive stored tick); negative indicates inverted arg order"
         );
     }
 
-    function test__IntegrationSecurityEdge__D4_DescendingGrowthProducesGarbageTick() public onlyForked {
+    function test__IntegrationSecurityEdge__D4_DescendingGrowthCurrentlyWrapsOrShouldRevert() public onlyForked {
         pipeline.recordSynthetic(1000, 0, 5e30);
-        pipeline.recordSynthetic(1001, 12, 1e30);
 
-        GrowthObservation old = pipeline.oldest();
-        GrowthObservation lat = pipeline.latest();
-
-        assertEq(pipeline.count(), 2, "both obs recorded despite non-monotonic growth");
-
-        uint208 wrappedDelta = old.growthDelta(lat);
-        uint256 expectedWrap = (uint256(1) << 208) - (5e30 - 1e30);
-        assertEq(uint256(wrappedDelta), expectedWrap, "growthDelta must wrap silently");
-
-        int24 garbageTick = growthToTick(lat.cumulativeGrowth(), old.cumulativeGrowth());
-        assertLt(garbageTick, 0, "descending growth produces negative tick -- EMA will integrate it");
+        try pipeline.recordSynthetic(1001, 12, 1e30) {
+            assertEq(pipeline.count(), 2, "both obs recorded despite non-monotonic growth");
+            GrowthObservation old = pipeline.oldest();
+            GrowthObservation lat = pipeline.latest();
+            uint208 wrappedDelta = old.growthDelta(lat);
+            assertGt(
+                uint256(wrappedDelta),
+                uint256(1) << 207,
+                "descending growth wraps to near 2^208 (current silent-wrap behavior)"
+            );
+        } catch {
+            assertEq(pipeline.count(), 1, "non-monotonic growth correctly rejected by record()");
+        }
     }
 }

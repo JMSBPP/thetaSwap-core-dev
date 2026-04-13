@@ -23,12 +23,12 @@ contract BaseForkTest is BaseTest {
     bool forked;
 
     modifier onlyForked() {
-        if (forked) {
-            console2.log("running forked test");
-            _;
+        if (!forked) {
+            vm.skip(true);
             return;
         }
-        console2.log("skipping forked test");
+        console2.log("running forked test");
+        _;
     }
 
     function setUp() public virtual {

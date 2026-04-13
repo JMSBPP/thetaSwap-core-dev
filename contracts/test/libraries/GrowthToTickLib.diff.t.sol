@@ -96,8 +96,11 @@ contract GrowthToTickLibDifferentialTest is Test {
     function test__fuzzBTT__GrowthToTick_ZeroAnchorReverts(uint256 currentGrowth) public {
         currentGrowth = bound(currentGrowth, 0, type(uint208).max);
 
-        vm.expectRevert(bytes(""));
-        this.externalGrowthToTick(uint208(currentGrowth), 0);
+        try this.externalGrowthToTick(uint208(currentGrowth), 0) {
+            fail();
+        } catch (bytes memory reason) {
+            assertEq(reason.length, 0, "expected FullMath bare require (empty revert) for zero anchor");
+        }
     }
 
     function test__fuzzBTT__GrowthToTick_ZeroCurrentReverts(uint256 anchorGrowth) public {
@@ -136,8 +139,11 @@ contract GrowthToTickLibDifferentialTest is Test {
 
         currentGrowth = bound(currentGrowth, minOverflowCurrent + 1, type(uint208).max);
 
-        vm.expectRevert(bytes(""));
-        this.externalGrowthToTick(uint208(currentGrowth), uint208(anchorGrowth));
+        try this.externalGrowthToTick(uint208(currentGrowth), uint208(anchorGrowth)) {
+            fail();
+        } catch (bytes memory reason) {
+            assertEq(reason.length, 0, "expected FullMath bare require (empty revert) for Stage 1 overflow");
+        }
     }
 
     function test__fuzzSecurityEdge__GrowthToTick_SqrtPriceX96FitsInUint160(

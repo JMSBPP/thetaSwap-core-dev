@@ -10,18 +10,13 @@ import {PoolConfigStore, PoolConfigStoreLib} from "core/src/libraries/PoolConfig
 import {StoreKey, StoreKeyLib} from "core/src/types/StoreKey.sol";
 import {ConfigEntry, ConfigEntryLib} from "core/src/types/ConfigEntry.sol";
 
-/// @title AngstromAccumulatorConsumer
-/// @notice Read-only Angstrom client. Surfaces accumulator values, block metadata,
-///         and pool configuration via extsload. Does NOT write any state.
 contract AngstromAccumulatorConsumer {
-    // ── Angstrom storage layout constants ──
     uint256 private constant POOL_REWARDS_SLOT = 7;
     uint256 private constant REWARD_GROWTH_SIZE = 16777216;
     uint256 private constant LAST_BLOCK_CONFIG_STORE_SLOT = 3;
     uint256 private constant LAST_BLOCK_BIT_OFFSET = 0;
     uint256 private constant STORE_BIT_OFFSET = 64;
 
-    // ── Immutables ──
     IPoolManager immutable UNI_V4;
     IAngstromAuth immutable ANGSTROM;
 
@@ -36,15 +31,11 @@ contract AngstromAccumulatorConsumer {
         UNI_V4 = _poolManager;
     }
 
-    // ── Accumulator reads ──
-
-    /// @notice Returns the cumulative global reward growth for a pool.
     function globalGrowth(PoolId poolId) external view returns (uint256 _globalGrowth) {
         bytes32 base = bytes32(POOL_REWARDS_SLOT).deriveMapping(PoolId.unwrap(poolId));
         _globalGrowth = ANGSTROM.extsload(uint256(base.offset(REWARD_GROWTH_SIZE)));
     }
 
-    /// @notice Returns the cumulative reward growth inside a tick range.
     function growthInside(PoolId poolId, int24 tickLower, int24 tickUpper)
         external
         view
@@ -68,24 +59,23 @@ contract AngstromAccumulatorConsumer {
         }
     }
 
-    // ── Metadata reads ──
-
-    /// @notice Returns the block number of the most recent Angstrom bundle execution.
     function lastBlockUpdated() external view returns (uint64) {
         return uint64(ANGSTROM.extsload(LAST_BLOCK_CONFIG_STORE_SLOT) >> LAST_BLOCK_BIT_OFFSET);
     }
 
-    /// @notice Returns the SSTORE2 address of Angstrom's current PoolConfigStore.
     function configStore() public view returns (PoolConfigStore) {
         uint256 value = ANGSTROM.extsload(LAST_BLOCK_CONFIG_STORE_SLOT);
         return PoolConfigStore.wrap(address(uint160(value >> STORE_BIT_OFFSET)));
     }
 
-    // ── Pool configuration reads ──
+    function poolManager() external view returns (IPoolManager) {
+        return UNI_V4;
+    }
 
-    /// @notice Returns whether at least one Angstrom pool exists for the given token pair.
-    /// @param token0 The lower-address token. Must be less than token1.
-    /// @param token1 The higher-address token.
+    function angstrom() external view returns (IAngstromAuth) {
+        return ANGSTROM;
+    }
+
     function poolExists(address token0, address token1) external view returns (bool) {
         if (token0 >= token1) return false;
 
@@ -101,11 +91,6 @@ contract AngstromAccumulatorConsumer {
         return false;
     }
 
-    /// @notice Returns the tick spacing and bundle fee for a specific pool config entry.
-    /// @dev Reverts with NoEntry if the index has no matching entry for the token pair.
-    /// @param token0 The lower-address token (caller must sort).
-    /// @param token1 The higher-address token.
-    /// @param index The config entry index to read.
     function getPoolConfig(address token0, address token1, uint256 index)
         external
         view

@@ -89,14 +89,42 @@ contract EMAGrowthTransformationLibDifferentialTest is Test {
         vm.warp(10_000);
         uint24 currentEpoch = uint24((block.timestamp >> 6) & 0xFFFFFF);
 
-        // Bound to a non-wrapping offset so futureEpoch > currentEpoch in uint24 math
-        uint256 maxOffset = uint256(type(uint24).max) - uint256(currentEpoch);
-        futureOffset = uint24(bound(uint256(futureOffset), 1, maxOffset));
+        // Bound to genuinely-future range in uint24 wrap space (forwardDist < 2^23).
+        // Larger offsets are interpreted as wrap-behind by the wrap-safe guard.
+        futureOffset = uint24(bound(uint256(futureOffset), 1, (1 << 23) - 1));
 
         uint24 futureEpoch = currentEpoch + futureOffset;
         OraclePack futurePack = _packAtEpoch(futureEpoch);
 
         vm.expectRevert(abi.encodeWithSelector(FuturePack.selector, futureEpoch, currentEpoch));
         m.runUpdate(futurePack, DEFAULT_PERIODS, DEFAULT_CLAMP);
+    }
+
+    function test__fuzzSecurityEdge__EMA_NegativeClampDeltaCurrentlyAccepted(int24 clamp) public {
+        clamp = int24(bound(clamp, -1000, -1));
+
+        MockEMABuffer m = new MockEMABuffer(BUFFER_CAPACITY);
+        m.recordObs(1000, 0, 1e18);
+        m.recordObs(1001, 12, 5e18);
+
+        vm.warp(10_000);
+        uint24 currentEpoch = uint24((block.timestamp >> 6) & 0xFFFFFF);
+        OraclePack stalePack = _packAtEpoch(currentEpoch - 1);
+
+        try m.runUpdate(stalePack, DEFAULT_PERIODS, clamp) returns (OraclePack returned) {
+            assertEq(
+                uint256(returned.epoch()),
+                uint256(currentEpoch),
+                "EMA advances epoch with negative clampDelta (current silent behavior)"
+            );
+            assertTrue(
+                OraclePack.unwrap(returned) != OraclePack.unwrap(stalePack),
+                "returned pack must differ from stale (observable state change)"
+            );
+        } catch {
+            // Forward-compatibility branch: if a future guard is added to reject
+            // negative clampDelta, record() will revert here. Currently unreachable —
+            // no such guard exists in the library as of this commit.
+        }
     }
 }

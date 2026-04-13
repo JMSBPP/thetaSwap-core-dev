@@ -46,12 +46,15 @@ function updateGrowthEMA(
     uint24 currentEpoch = uint24((block.timestamp >> 6) & 0xFFFFFF);
     if (currentEpoch == currentOraclePack.epoch()) return currentOraclePack;
 
-    // ── Step 1b: Future-pack guard (F-01) ──
-    // Reject packs whose epoch is ahead of the current epoch. Without this, the
-    // unchecked uint24 subtraction in Step 6 wraps to ~2^24 epochs (~34 years of
-    // timeDelta), producing a catastrophic single-update EMA shift with no revert.
-    if (currentOraclePack.epoch() > currentEpoch) {
-        revert FuturePack(currentOraclePack.epoch(), currentEpoch);
+    // ── Step 1b: Future-pack guard (F-01, wrap-safe) ──
+    // After the same-epoch early return, pack.epoch() != currentEpoch.
+    // Compute forward distance in uint24 wrap space: small distance (< 2^23) ⟹
+    // pack is genuinely ahead; large distance ⟹ pack is behind, we wrapped past it.
+    unchecked {
+        uint24 forwardDist = uint24(currentOraclePack.epoch() - currentEpoch);
+        if (forwardDist < (1 << 23)) {
+            revert FuturePack(currentOraclePack.epoch(), currentEpoch);
+        }
     }
 
     // ── Step 2: Buffer precondition ──

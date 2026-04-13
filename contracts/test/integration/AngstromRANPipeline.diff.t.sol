@@ -109,6 +109,8 @@ contract AngstromRANPipelineIntegrationTest is BaseForkTest {
 
         for (uint256 i; i < rows.length; ++i) {
             vm.rollFork(rows[i].blockNumber);
+            require(block.number >= BLOCK_NUMBER_0, "pre-Angstrom block");
+            require(address(consumer).code.length > 0, "consumer deploy-persistence lost");
             pipeline.recordFromOnChain(i == 0 ? 0 : 12);
         }
 
@@ -132,8 +134,13 @@ contract AngstromRANPipelineIntegrationTest is BaseForkTest {
             "latest growth matches on-chain"
         );
 
-        int24 expectedGrowthTick = growthToTick(lat.cumulativeGrowth(), old.cumulativeGrowth());
-        assertGe(expectedGrowthTick, 0, "real monotonic growth should yield non-negative tick");
+        // Independently verify growth is non-decreasing on-chain (the real invariant,
+        // not via the library under test). Early windows can have flat growth.
+        assertGe(
+            lat.cumulativeGrowth(),
+            old.cumulativeGrowth(),
+            "real on-chain growth must be non-decreasing over the sampled window"
+        );
 
         uint24 currentEpoch = uint24((block.timestamp >> 6) & 0xFFFFFF);
         OraclePack stalePack = OraclePackLibrary.storeOraclePack(

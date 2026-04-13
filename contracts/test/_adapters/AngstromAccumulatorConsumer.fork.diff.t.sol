@@ -38,6 +38,8 @@ contract AngstromAccumulatorConsumerForkDifferentialTest is BaseForkTest {
     function test__OffChainDifferentialTest__First() public onlyForked {
         AccumulatorRow memory row = decodeRow(ffiPython(rowArgs(vm, 0)));
         vm.rollFork(row.blockNumber);
+        require(block.number >= BLOCK_NUMBER_0, "pre-Angstrom block");
+        require(address(consumer).code.length > 0, "consumer deploy-persistence lost");
         uint256 onchain = consumer.globalGrowth(USDC_WETH);
         assertEq(onchain, row.globalGrowth, "first row mismatch");
     }
@@ -46,6 +48,8 @@ contract AngstromAccumulatorConsumerForkDifferentialTest is BaseForkTest {
         uint256 n = decodeLen(ffiPython(lenArgs()));
         AccumulatorRow memory row = decodeRow(ffiPython(rowArgs(vm, n - 1)));
         vm.rollFork(row.blockNumber);
+        require(block.number >= BLOCK_NUMBER_0, "pre-Angstrom block");
+        require(address(consumer).code.length > 0, "consumer deploy-persistence lost");
         uint256 onchain = consumer.globalGrowth(USDC_WETH);
         assertEq(onchain, row.globalGrowth, "last row mismatch");
     }
@@ -54,6 +58,8 @@ contract AngstromAccumulatorConsumerForkDifferentialTest is BaseForkTest {
         AccumulatorRow memory row = decodeRow(ffiPython(rowArgs(vm, FIRST_NONZERO_IDX)));
         assertTrue(row.globalGrowth > 0, "expected non-zero growth");
         vm.rollFork(row.blockNumber);
+        require(block.number >= BLOCK_NUMBER_0, "pre-Angstrom block");
+        require(address(consumer).code.length > 0, "consumer deploy-persistence lost");
         uint256 onchain = consumer.globalGrowth(USDC_WETH);
         assertEq(onchain, row.globalGrowth, "first nonzero mismatch");
     }
@@ -61,6 +67,8 @@ contract AngstromAccumulatorConsumerForkDifferentialTest is BaseForkTest {
     function test__OffChainDifferentialTest__MaxSpike() public onlyForked {
         AccumulatorRow memory row = decodeRow(ffiPython(rowArgs(vm, MAX_SPIKE_IDX)));
         vm.rollFork(row.blockNumber);
+        require(block.number >= BLOCK_NUMBER_0, "pre-Angstrom block");
+        require(address(consumer).code.length > 0, "consumer deploy-persistence lost");
         uint256 onchain = consumer.globalGrowth(USDC_WETH);
         assertEq(onchain, row.globalGrowth, "max spike mismatch");
     }
@@ -70,6 +78,8 @@ contract AngstromAccumulatorConsumerForkDifferentialTest is BaseForkTest {
         uint256 mid = n / 2;
         AccumulatorRow memory row = decodeRow(ffiPython(rowArgs(vm, mid)));
         vm.rollFork(row.blockNumber);
+        require(block.number >= BLOCK_NUMBER_0, "pre-Angstrom block");
+        require(address(consumer).code.length > 0, "consumer deploy-persistence lost");
         uint256 onchain = consumer.globalGrowth(USDC_WETH);
         assertEq(onchain, row.globalGrowth, "midpoint mismatch");
     }
@@ -81,6 +91,8 @@ contract AngstromAccumulatorConsumerForkDifferentialTest is BaseForkTest {
 
         AccumulatorRow memory row = decodeRow(ffiPython(rowArgs(vm, idx)));
         vm.rollFork(row.blockNumber);
+        require(block.number >= BLOCK_NUMBER_0, "pre-Angstrom block");
+        require(address(consumer).code.length > 0, "consumer deploy-persistence lost");
         uint256 onchain = consumer.globalGrowth(USDC_WETH);
         assertEq(onchain, row.globalGrowth, "globalGrowth mismatch");
     }

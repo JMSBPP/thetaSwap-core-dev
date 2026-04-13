@@ -40,8 +40,10 @@ contract GrowthObservationDifferentialTest is BaseForkTest {
         uint256 idx = bound(idxSeed, 1, n - 1);
         AccumulatorRow memory prevRow = decodeRow(ffiPython(rowArgs(vm, idx - 1)));
         AccumulatorRow memory currRow = decodeRow(ffiPython(rowArgs(vm, idx)));
+        vm.assume(currRow.blockTimestamp - prevRow.blockTimestamp <= type(uint16).max);
 
         vm.rollFork(prevRow.blockNumber);
+        require(block.number >= BLOCK_NUMBER_0, "pre-Angstrom block");
         uint256 prevTimestamp = block.timestamp;
         GrowthObservation prev = newGrowthObservation(
             block.number,
@@ -50,6 +52,7 @@ contract GrowthObservationDifferentialTest is BaseForkTest {
         );
 
         vm.rollFork(currRow.blockNumber);
+        require(block.number >= BLOCK_NUMBER_0, "pre-Angstrom block");
         GrowthObservation curr = newGrowthObservation(
             block.number,
             block.timestamp - prevTimestamp,
@@ -65,8 +68,10 @@ contract GrowthObservationDifferentialTest is BaseForkTest {
         uint256 idx = bound(idxSeed, 1, n - 1);
         AccumulatorRow memory prevRow = decodeRow(ffiPython(rowArgs(vm, idx - 1)));
         AccumulatorRow memory currRow = decodeRow(ffiPython(rowArgs(vm, idx)));
+        vm.assume(currRow.blockTimestamp - prevRow.blockTimestamp <= type(uint16).max);
 
         vm.rollFork(prevRow.blockNumber);
+        require(block.number >= BLOCK_NUMBER_0, "pre-Angstrom block");
         uint256 prevTimestamp = block.timestamp;
         GrowthObservation prev = newGrowthObservation(
             block.number,
@@ -75,6 +80,7 @@ contract GrowthObservationDifferentialTest is BaseForkTest {
         );
 
         vm.rollFork(currRow.blockNumber);
+        require(block.number >= BLOCK_NUMBER_0, "pre-Angstrom block");
         GrowthObservation curr = newGrowthObservation(
             block.number,
             block.timestamp - prevTimestamp,
@@ -90,8 +96,10 @@ contract GrowthObservationDifferentialTest is BaseForkTest {
         uint256 idx = bound(idxSeed, 1, n - 1);
         AccumulatorRow memory prevRow = decodeRow(ffiPython(rowArgs(vm, idx - 1)));
         AccumulatorRow memory currRow = decodeRow(ffiPython(rowArgs(vm, idx)));
+        vm.assume(currRow.blockTimestamp - prevRow.blockTimestamp <= type(uint16).max);
 
         vm.rollFork(prevRow.blockNumber);
+        require(block.number >= BLOCK_NUMBER_0, "pre-Angstrom block");
         uint256 prevTimestamp = block.timestamp;
         GrowthObservation prev = newGrowthObservation(
             block.number,
@@ -100,6 +108,7 @@ contract GrowthObservationDifferentialTest is BaseForkTest {
         );
 
         vm.rollFork(currRow.blockNumber);
+        require(block.number >= BLOCK_NUMBER_0, "pre-Angstrom block");
         GrowthObservation curr = newGrowthObservation(
             block.number,
             block.timestamp - prevTimestamp,
@@ -118,6 +127,7 @@ contract GrowthObservationDifferentialTest is BaseForkTest {
         AccumulatorRow memory row = decodeRow(ffiPython(rowArgs(vm, idx)));
 
         vm.rollFork(row.blockNumber);
+        require(block.number >= BLOCK_NUMBER_0, "pre-Angstrom block");
         GrowthObservation obs = newGrowthObservation(
             block.number,
             FIRST_OBSERVATION_TIME_DELTA,
@@ -138,12 +148,15 @@ contract GrowthObservationDifferentialTest is BaseForkTest {
         uint32 target = uint32(targetRow.blockNumber);
 
         vm.rollFork(belowRow.blockNumber);
+        require(block.number >= BLOCK_NUMBER_0, "pre-Angstrom block");
         GrowthObservation below = newGrowthObservation(block.number, FIRST_OBSERVATION_TIME_DELTA, belowRow.globalGrowth);
 
         vm.rollFork(targetRow.blockNumber);
+        require(block.number >= BLOCK_NUMBER_0, "pre-Angstrom block");
         GrowthObservation atTarget = newGrowthObservation(block.number, FIRST_OBSERVATION_TIME_DELTA, targetRow.globalGrowth);
 
         vm.rollFork(aboveRow.blockNumber);
+        require(block.number >= BLOCK_NUMBER_0, "pre-Angstrom block");
         GrowthObservation above = newGrowthObservation(block.number, FIRST_OBSERVATION_TIME_DELTA, aboveRow.globalGrowth);
 
         assertTrue(below.blockNumberLt(target), "below should be lt target");

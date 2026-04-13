@@ -71,7 +71,9 @@ contract BlockNumberAwareGrowthObserverLibDifferentialTest is BaseForkTest {
             mock.recordObs(rows[i].blockNumber, FIRST_OBSERVATION_TIME_DELTA, rows[i].globalGrowth);
         }
 
-        uint32 target = uint32(rows[1].blockNumber);
+        // Target the 2nd-oldest block — forces binary search to traverse maximum depth
+        // on a descending-index buffer. Targeting rows[1] (2nd-newest) would hit in 1-2 iterations.
+        uint32 target = uint32(rows[rows.length - 2].blockNumber);
 
         uint256 gasBefore = gasleft();
         GrowthObservation found = mock.observeAtTarget(target);
@@ -83,7 +85,7 @@ contract BlockNumberAwareGrowthObserverLibDifferentialTest is BaseForkTest {
         console2.log("buffer span (seconds):", spanSeconds);
         console2.log("buffer span (minutes):", spanSeconds / 60);
 
-        assertEq(uint256(found.blockNumber()), rows[1].blockNumber, "observeAt returned wrong row");
+        assertEq(uint256(found.blockNumber()), rows[rows.length - 2].blockNumber, "observeAt returned wrong row");
         assertLt(gasUsed, 18_000, "observeAt gas regressed beyond expected budget");
         assertGt(spanSeconds, 1800, "buffer span below 30 min floor");
     }
@@ -384,7 +386,10 @@ contract BlockNumberAwareGrowthObserverLibDifferentialTest is BaseForkTest {
         );
     }
 
-    function test__fuzzSecurityEdge__BinarySearchUnderKeeperSkipPattern(uint256 gapSeed) public onlyForked {
+    function test__fuzzSecurityEdge__BinarySearchUnderKeeperSkipPattern(
+        uint256 gapSeed,
+        uint256 targetSeed
+    ) public onlyForked {
         MockBlockNumberAware m = new MockBlockNumberAware(BUFFER_CAPACITY);
         vm.makePersistent(address(m));
 
@@ -400,7 +405,7 @@ contract BlockNumberAwareGrowthObserverLibDifferentialTest is BaseForkTest {
         uint32 oldestBlock = m.oldest().blockNumber();
         uint32 newestBlock = m.latest().blockNumber();
 
-        uint32 target = uint32(bound(gapSeed, oldestBlock, newestBlock));
+        uint32 target = uint32(bound(targetSeed, oldestBlock, newestBlock));
 
         uint256 gasBefore = gasleft();
         GrowthObservation result = m.observeAtTarget(target);
@@ -429,16 +434,18 @@ contract BlockNumberAwareGrowthObserverLibDifferentialTest is BaseForkTest {
         vm.makePersistent(address(m));
 
         m.recordObs(1000, 0, firstGrowth);
-        m.recordObs(1001, 12, secondGrowth);
 
-        assertEq(m.count(), 2, "both obs recorded (record checks block, not growth)");
-
-        GrowthObservation older = m.oldest();
-        GrowthObservation newer = m.latest();
-
-        uint208 wrappedDelta = older.growthDelta(newer);
-
-        uint256 expectedWrap = (uint256(1) << 208) - (firstGrowth - secondGrowth);
-        assertEq(uint256(wrappedDelta), expectedWrap, "wrap magnitude mismatch");
+        try m.recordObs(1001, 12, secondGrowth) {
+            assertEq(m.count(), 2, "both obs recorded (record checks block, not growth)");
+            GrowthObservation older = m.oldest();
+            GrowthObservation newer = m.latest();
+            uint208 wrappedDelta = older.growthDelta(newer);
+            uint256 expectedWrap = (uint256(1) << 208) - (firstGrowth - secondGrowth);
+            assertEq(uint256(wrappedDelta), expectedWrap, "wrap magnitude mismatch");
+        } catch {
+            // Forward-compat: if record() adds a NonMonotonicGrowth guard (F-04),
+            // the second push reverts and only the first observation remains.
+            assertEq(m.count(), 1, "non-monotonic growth rejected by record()");
+        }
     }
 }

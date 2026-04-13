@@ -19,6 +19,10 @@ ignored_error_codes = [
   5574, # Contract size too large
 ]
 
+skip = [
+     "src/playgrounds/**"
+]
+
 remappings = [
   "solady/src/=lib/solady/src/",
   "v4-core/src/=lib/v4-periphery/lib/v4-core/src/",
@@ -34,6 +38,7 @@ remappings = [
   "panoptic-v2/test/=lib/2025-12-panoptic/test/foundry/",
   "panoptic-v2/v3-core/=lib/2025-12-panoptic/lib/v3-core/contracts/",
   "panoptic-v2/v3-periphery/=lib/2025-12-panoptic/lib/v3-periphery/contracts/",
+  "bunni-v2/=lib/bunni-v2/src/",
 
   # Context-aware: panoptic's internal imports resolve against its own bundled libs
   "lib/2025-12-panoptic/:v4-core/=lib/v4-periphery/lib/v4-core/src/",
@@ -52,6 +57,13 @@ remappings = [
   "lib/2025-12-panoptic/:@test_periphery/=lib/2025-12-panoptic/test/foundry/test_periphery/",
   "lib/2025-12-panoptic/:@scripts/=lib/2025-12-panoptic/scripts/",
 ]
+
+[profile.playground]
+src = "src/playgrounds"
+test = "test/playgrounds"
+match_test = "^test__(PanopticAngstrom|ThetaSwap)__"
+no_match_path = "lib/*"
+verbosity = 3
 
 [profile.default.fmt]
 line_length = 100

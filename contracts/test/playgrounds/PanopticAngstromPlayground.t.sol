@@ -2,14 +2,15 @@
 pragma solidity >=0.8.26;
 
 import {AngstromTest} from "anstrong-test/Angstrom.t.sol";
-import {PanopticPoolTest} from "anstrong-test/PanopticPoolAngstromCompatibleTests.t.sol";
+import {PanopticPoolTest} from "anstrong-test/playgrounds/PanopticPoolAngstromCompatibleTests.t.sol";
 import {PoolId, PoolIdLibrary} from "v4-core/src/types/PoolId.sol";
 import {PoolKey} from "v4-core/src/types/PoolKey.sol";
 import {V4RouterSimple} from "panoptic-v2/test/testUtils/V4RouterSimple.sol";
 import {
     SemiFungiblePositionManagerHarness,
     PanopticPoolHarness
-} from "anstrong-test/PanopticPoolAngstromCompatibleTests.t.sol";
+} from "anstrong-test/playgrounds/PanopticPoolAngstromCompatibleTests.t.sol";
+
 import {
     ISemiFungiblePositionManager
 } from "panoptic-v2/src/interfaces/ISemiFungiblePositionManager.sol";
@@ -148,7 +149,7 @@ library OptionBuilderLibrary {
 
 // NOTE: This assumes MEV ~ 0 AND block-number granularity
 
-contract PanopticPlaygroundTest is AngstromTest, PanopticPoolTest {
+contract PanopticAngstromPlaygroundTest is AngstromTest, PanopticPoolTest {
     using PoolIdLibrary for PoolKey;
     using OptionBuilderLibrary for TokenId;
     using IUniV4 for PoolManager_;
@@ -319,7 +320,7 @@ contract PanopticPlaygroundTest is AngstromTest, PanopticPoolTest {
 
         uint256 amount1 = LiquidityAmounts.getAmount1ForLiquidity(sqrtLower, sqrtUpper, expectedLiq);
 
-        console2.log("M_B  = L(nominal)*(sqrt(p_u) - sqrt(p_l))", amount1);
+        console2.log(" d Y  = L(nominal)*(sqrt(p_u) - sqrt(p_l))", amount1);
         console2.log("Seller C :: Cash Secured Margin Deposited: ", marginDeposited);
         console2.log("Seller C :: NUMBER OF OPTION LEGS", pp.numberOfLegs(Seller));
         (uint128 balance, uint64 poolUtilization0, uint64 poolUtilization1) =

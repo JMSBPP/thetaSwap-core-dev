@@ -3,12 +3,16 @@ pragma solidity >=0.8.26;
 
 import {SlotDerivation} from "openzeppelin-contracts/utils/SlotDerivation.sol";
 import {IAngstromAuth} from "core/src/interfaces/IAngstromAuth.sol";
-import {PoolId} from "v4-core/src/types/PoolId.sol";
+import {PoolId, PoolIdLibrary} from "v4-core/src/types/PoolId.sol";
 import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
 import {IUniV4} from "core/src/interfaces/IUniV4.sol";
 import {PoolConfigStore, PoolConfigStoreLib} from "core/src/libraries/PoolConfigStore.sol";
 import {StoreKey, StoreKeyLib} from "core/src/types/StoreKey.sol";
 import {ConfigEntry, ConfigEntryLib} from "core/src/types/ConfigEntry.sol";
+import {Currency} from "v4-core/src/types/Currency.sol";
+import {PoolKey} from "v4-core/src/types/PoolKey.sol";
+import {IHooks} from "v4-core/src/interfaces/IHooks.sol";
+import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
 contract AngstromAccumulatorConsumer {
     uint256 private constant POOL_REWARDS_SLOT = 7;
@@ -16,12 +20,14 @@ contract AngstromAccumulatorConsumer {
     uint256 private constant LAST_BLOCK_CONFIG_STORE_SLOT = 3;
     uint256 private constant LAST_BLOCK_BIT_OFFSET = 0;
     uint256 private constant STORE_BIT_OFFSET = 64;
+    uint24 constant DEFAULT_UNLOCK_FEE = 200_000;
 
     IPoolManager immutable UNI_V4;
     IAngstromAuth immutable ANGSTROM;
 
     using SlotDerivation for bytes32;
     using IUniV4 for IPoolManager;
+    using PoolIdLibrary for PoolKey;
     using PoolConfigStoreLib for PoolConfigStore;
     using ConfigEntryLib for ConfigEntry;
     using StoreKeyLib for address;
@@ -98,5 +104,18 @@ contract AngstromAccumulatorConsumer {
     {
         StoreKey key = StoreKeyLib.keyFromAssetsUnchecked(token0, token1);
         return configStore().get(key, index);
+    }
+
+    function getPoolId(IERC20 token0, IERC20 token1) external view returns (PoolId poolId) {
+        Currency currency0 = Currency.wrap(address(token0));
+        Currency currency1 = Currency.wrap(address(token1));
+        PoolKey memory poolKey = PoolKey({
+            currency0: currency0,
+            currency1: currency1,
+            fee: DEFAULT_UNLOCK_FEE,
+            tickSpacing: 1,
+            hooks: IHooks(address(ANGSTROM))
+        });
+        poolId = poolKey.toId();
     }
 }

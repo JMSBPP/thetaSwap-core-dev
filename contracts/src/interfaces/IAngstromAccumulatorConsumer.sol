@@ -5,6 +5,7 @@ import {IAngstromAuth} from "core/src/interfaces/IAngstromAuth.sol";
 import {PoolId} from "v4-core/src/types/PoolId.sol";
 import {IPoolManager} from "v4-core/src/interfaces/IPoolManager.sol";
 import {PoolConfigStore} from "core/src/libraries/PoolConfigStore.sol";
+import {IERC20} from "forge-std/interfaces/IERC20.sol";
 
 /// @title IAngstromAccumulatorConsumer
 /// @notice Read-only Angstrom client. Surfaces accumulator values, block metadata,
@@ -51,4 +52,6 @@ interface IAngstromAccumulatorConsumer {
         external
         view
         returns (int24 tickSpacing, uint24 bundleFee);
+
+    function getPoolId(IERC20 token0, IERC20 token1) external view returns(PoolId poolId);
 }

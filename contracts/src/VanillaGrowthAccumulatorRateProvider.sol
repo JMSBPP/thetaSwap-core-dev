@@ -7,7 +7,7 @@ import {IAngstromAccumulatorConsumer}
     from "core/src/interfaces/IAngstromAccumulatorConsumer.sol";
 import {PoolId} from "v4-core/src/types/PoolId.sol";
 import {FullMath} from "v4-core/src/libraries/FullMath.sol";
-
+import {IERC20} from "forge-std/interfaces/IERC20.sol";
 import {GrowthObservation} from "core/src/types/GrowthObservation.sol";
 import {growthToSqrtPriceX96} from "core/src/libraries/GrowthToTickLib.sol";
 import {RayMathLib} from "core/src/libraries/RayMathLib.sol";
@@ -20,10 +20,21 @@ contract VanillaGrowthAccumulatorRateProvider is IRateProvider {
     IAngstromAccumulatorConsumer public immutable CONSUMER;
     PoolId public immutable POOL_ID;
 
-    constructor(IAngstromAccumulatorConsumer _consumer, PoolId _poolId) {
+
+    error PoolDoesNotExist(address token0, address token1);
+    constructor(
+		IAngstromAccumulatorConsumer _consumer,
+		IERC20 token0,
+		IERC20 token1
+    ) {
         CONSUMER = _consumer;
-        POOL_ID = _poolId;
-        GrowthObservationStorage.initializePool(_poolId, BUFFER_CAPACITY);
+
+	if (!CONSUMER.poolExists(address(token0), address(token1))){
+	    revert PoolDoesNotExist(address(token0), address(token1));
+	}
+	
+        POOL_ID = CONSUMER.getPoolId(token0, token1);
+        GrowthObservationStorage.initializePool(POOL_ID, BUFFER_CAPACITY);
     }
 
     function recordObservation(uint256 relativeTimeDelta) external {

@@ -31,3 +31,9 @@
 [submodule "contracts/lib/pendle-core-v2-public"]
 	path = contracts/lib/pendle-core-v2-public
 	url = https://github.com/pendle-finance/pendle-core-v2-public
+[submodule "contracts/lib/euler-vault-kit"]
+	path = contracts/lib/euler-vault-kit
+	url = https://github.com/euler-xyz/euler-vault-kit
+[submodule "contracts/lib/ethereum-vault-connector"]
+	path = contracts/lib/ethereum-vault-connector
+	url = https://github.com/euler-xyz/ethereum-vault-connector

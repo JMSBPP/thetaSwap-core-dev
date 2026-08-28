@@ -1,0 +1,26 @@
+AngstromAccumulatorSource::growthInside
+├── given current tick is within [tickLower, tickUpper)
+│   └── it returns globalGrowth minus outsideBelow minus outsideAbove.
+├── given current tick is below tickLower
+│   └── it returns outsideBelow minus outsideAbove.
+├── given current tick is at or above tickUpper
+│   └── it returns outsideAbove minus outsideBelow.
+├── given all growth values are zero
+│   └── it returns zero.
+└── given growthInside has been computed
+    └── it satisfies conservation: growthInside + outsideBelow + outsideAbove == globalGrowth (in-range case).
+
+AngstromAccumulatorSource::globalGrowth
+├── given pool has accumulated rewards
+│   └── it returns the cumulative global growth from storage.
+└── given pool has no rewards
+    └── it returns zero.
+
+AngstromAccumulatorSource::epochOf
+├── given block number and epoch length
+│   └── it returns blockNumber divided by epochLength.
+└── given block number is zero
+    └── it returns zero.
+
+AngstromAccumulatorSource::epochLength
+└── it returns the configured epoch length.

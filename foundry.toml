@@ -3,7 +3,7 @@ src = "src"
 out = "out-sol"
 libs = ["lib"]
 evm_version = "cancun"
-solc_version = "0.8.26"
+auto_detect_solc = true
 via_ir = true
 ffi = true
 fs_permissions = [
@@ -35,12 +35,19 @@ remappings = [
     "@libraries/=src/libraries/",
     "@utils/=src/utils/",
     "@foundry-script/=foundry-script/",
+    "@cryptoalgebra/integral-base-plugin/=lib/integral-team-plugins/src/plugin/stub/",
+    "@cryptoalgebra/integral-core/=lib/Algebra/src/core/",
+    # Compose (Perfect-Abstractions) diamond token primitives
+    "@compose/=lib/Compose/src/",
+    "@range-accrual-note/=src/range-accrual-note/"
 ]
 
 script = "foundry-script"
 threads = 6
 force = false
 ignored_error_codes = [2018, 2394, 5667, 6321]
+# AlgebraIntegration has a pre-existing Yul stack-too-deep; exclude from default build
+deny_warnings = false
 
 [profile.lite]
 skip = ["test/**", "foundry-script/**"]
